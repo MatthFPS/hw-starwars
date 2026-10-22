@@ -1,13 +1,21 @@
 {
   "name": "hw-starwars",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Star Wars character API",
+  "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/server.js",
+    "test": "node --test",
+    "lint": "eslint .",
+    "check": "npm test && npm run lint"
   },
-  "keywords": [],
-  "author": "",
   "license": "ISC",
-  "type": "commonjs"
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0"
+  }
 }
