@@ -1,0 +1,85 @@
+/* Star Wars theme on top of Bootstrap dark mode */
+:root {
+    --sw-yellow: #ffe81f;
+    --sw-space: #0b0d17;
+    --sw-panel: #151a2b;
+    --sw-panel-hover: #1e2540;
+    --sw-text: #e8e6e3;
+}
+
+body {
+    background-color: var(--sw-space);
+    color: var(--sw-text);
+}
+
+/* Two fixed star layers behind the content (static, so they never lag) */
+body::before,
+body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+}
+
+/* Layer 1: small stars of two sizes (tile 331px) */
+body::before {
+    background-image:
+            radial-gradient(circle at 17px 41px, #fff 0.5px, transparent 1px),
+            radial-gradient(circle at 73px 230px, #fff 0.5px, transparent 1px),
+            radial-gradient(circle at 118px 95px, #fff 1px, transparent 1.5px),
+            radial-gradient(circle at 190px 300px, #fff 0.5px, transparent 1px),
+            radial-gradient(circle at 230px 18px, #fff 0.5px, transparent 1px),
+            radial-gradient(circle at 262px 160px, #fff 1px, transparent 1.5px),
+            radial-gradient(circle at 305px 245px, #fff 0.5px, transparent 1px),
+            radial-gradient(circle at 40px 150px, #fff 0.5px, transparent 1px);
+    background-size: 331px 331px;
+}
+
+/* Layer 2: bigger stars, some yellow (tile 509px) */
+body::after {
+    background-image:
+            radial-gradient(circle at 60px 90px, var(--sw-yellow) 1.5px, transparent 2px),
+            radial-gradient(circle at 210px 330px, #fff 1px, transparent 1.5px),
+            radial-gradient(circle at 350px 140px, #fff 1.5px, transparent 2px),
+            radial-gradient(circle at 440px 420px, var(--sw-yellow) 1px, transparent 1.5px),
+            radial-gradient(circle at 120px 460px, #fff 1.5px, transparent 2px);
+    background-size: 509px 509px;
+}
+
+h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.5rem, 6vw, 2.5rem);
+    color: var(--sw-yellow);
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    text-shadow: 0 3px 0 #8a7500, 0 0 14px rgba(255, 232, 31, 0.45);
+}
+
+.list-group-item {
+    background-color: var(--sw-panel);
+    color: var(--sw-text);
+    transition: background-color 0.15s;
+}
+
+/* Hover: lighter panel and a yellow marker on the left */
+.list-group-item:hover {
+    background-color: var(--sw-panel-hover);
+    box-shadow: inset 4px 0 0 var(--sw-yellow);
+}
+
+/* Yellow glow when a form field is selected (for the form from issue 4) */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--sw-yellow);
+    box-shadow: 0 0 0 0.2rem rgba(255, 232, 31, 0.25);
+}
+
+.btn-primary {
+    --bs-btn-color: var(--sw-space);
+    --bs-btn-bg: var(--sw-yellow);
+    --bs-btn-border-color: var(--sw-yellow);
+    --bs-btn-hover-color: var(--sw-space);
+    --bs-btn-hover-bg: #ffd400;
+    --bs-btn-hover-border-color: #ffd400;
+}
