@@ -17,7 +17,6 @@ function createCharacterRepository(initialCharacters = DEFAULT_CHARACTERS) {
     return {
         // Example of the pattern: copy the array, so callers cannot change it by accident.
         getAll: async () => [...characters],
-        // TODO issue 3: getById(id) returns the character or undefined
         getById: async (id) => characters.find((c) => c.id === id),
         // TODO issue 4: add(character) with a unique id (not the array length)
         // TODO issue 5: replace(id, character) and remove(id)

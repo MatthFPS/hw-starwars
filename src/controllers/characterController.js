@@ -7,7 +7,7 @@ const notImplemented = (res) => res.status(501).json({ error: 'Not implemented' 
 
 /**
  * Creates HTTP handlers for character operations.
- * * @param {{ getAllCharacters: () => Promise<object[]>, getCharacterById: (id: number) => Promise<object | null> }} characterService
+ * @param {{ getAllCharacters: () => Promise<object[]>, getCharacterById: (id: number) => Promise<object | null> }} characterService
  */
 function createCharacterController(characterService) {
     // Example of the pattern: call the service, answer 200, and on errors log the real
