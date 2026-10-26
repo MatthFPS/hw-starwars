@@ -14,3 +14,27 @@ test('getAll_initialCharacters_returnsCopyOfCharacters', async () => {
     // Assert
     assert.deepEqual(await repository.getAll(), initial);
 });
+
+test('getById_existingId_returnsCharacter', async () => {
+    // Arrange
+    const luke = { id: 1, name: 'Luke Skywalker', role: 'Jedi', planet: 'Tatooine' };
+    const repository = createCharacterRepository([luke]);
+
+    // Act
+    const result = await repository.getById(1);
+
+    // Assert
+    assert.deepEqual(result, luke);
+});
+
+test('getById_unknownId_returnsUndefined', async () => {
+    // Arrange
+    const luke = { id: 1, name: 'Luke Skywalker', role: 'Jedi', planet: 'Tatooine' };
+    const repository = createCharacterRepository([luke]);
+
+    // Act
+    const result = await repository.getById(2);
+
+    // Assert
+    assert.strictEqual(result, undefined);
+});

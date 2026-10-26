@@ -7,7 +7,7 @@ const notImplemented = (res) => res.status(501).json({ error: 'Not implemented' 
 
 /**
  * Creates HTTP handlers for character operations.
- * @param {{ getAllCharacters: () => Promise<object[]> }} characterService
+ * @param {{ getAllCharacters: () => Promise<object[]>, getCharacterById: (id: number) => Promise<object | null> }} characterService
  */
 function createCharacterController(characterService) {
     // Example of the pattern: call the service, answer 200, and on errors log the real
@@ -21,8 +21,19 @@ function createCharacterController(characterService) {
         }
     };
 
-    // TODO issue 3: 200 with the character, 404 if it does not exist
-    const handleGetOne = async (req, res) => notImplemented(res);
+    const handleGetOne = async (req, res) => {
+        try {
+            const id = Number(req.params.id);
+            const character = await characterService.getCharacterById(id);
+            if (!character) {
+                return res.status(404).json({ error: 'Character not found' });
+            }
+            return res.status(200).json(character);
+        } catch (error) {
+            console.error('Failed to get the character:', error);
+            return res.status(500).json({ error: 'Could not get the character' });
+        }
+    };
 
     // TODO issue 4: validate, create, respond 201 with the new character
     const handleCreate = async (req, res) => notImplemented(res);
