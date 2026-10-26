@@ -15,14 +15,21 @@ npm start
 
 ## API
 
-Udfyldes, efterhånden som endpoints bliver lavet.
+Alle svar er JSON, undtagen `/download`. Fejl har formen `{ "error": "..." }`. Fejlbeskeder fra API'et er på engelsk.
 
-* GET `/characters`: hent alle
-* GET `/characters/:id`: hent én
-* POST `/characters`: opret
-* PUT `/characters/:id`: erstat
-* DELETE `/characters/:id`: slet
-* GET `/download` og GET `/go-to-luke`
+| Metode og URL | Body | Svar |
+| --- | --- | --- |
+| GET `/characters` | | 200 med et array af karakterer |
+| GET `/characters/:id` | | 200 med karakteren, 404 hvis id'et ikke findes |
+| POST `/characters` | `{ name, role, planet }` | 201 med den nye karakter (serveren vælger id), 400 ved ugyldigt input |
+| PUT `/characters/:id` | `{ name, role, planet }` | 200 med den erstattede karakter, 400 ved ugyldigt input, 404 hvis id'et ikke findes |
+| DELETE `/characters/:id` | | 204 uden body, 404 hvis id'et ikke findes |
+| GET `/download` | | 200, tekstfilen `characters.txt` |
+| GET `/go-to-luke` | | 302 redirect til `/characters/1` |
+
+Gyldigt input: `name` er tekst med mindst 2 tegn efter trim, `role` er Jedi, Sith, Rebel eller Smuggler, og `planet` er tekst og ikke tom.
+
+Andre fejl: ukendt route giver 404 `{ "error": "Route not found" }`, ugyldig JSON giver 400 `{ "error": "Invalid JSON" }`, og uventede fejl giver 500 `{ "error": "Internal server error" }`.
 
 ## Struktur
 
@@ -129,7 +136,19 @@ Refleksion over 400,404,500:
 
 ## Tests
 
-Kort beskrivelse af de tests, der er lavet.
+Kør alle tests og lint med `npm run check`. Testene bruger Nodes indbyggede `node:test` og `node:assert`, så der er ikke installeret noget ekstra. Hver test følger Arrange, Act, Assert og hedder `metode_scenarie_forventet`, fx `postCharacter_invalidRole_returns400WithError`.
+
+* `tests/api.test.js`: starter en rigtig server med et nyt repository til hver test og kalder den med `fetch`. Dækker:
+    * 404 på ukendt route
+    * `logger` og `errorHandler` (400 ved ugyldig JSON, fast 500 uden detaljer)
+    * GET `/characters/:id` (200 og 404)
+    * POST `/characters` (201, trim, id fra klienten ignoreres, 400)
+    * `/download` og `/go-to-luke`
+* `tests/characterController.test.js`: tester `validateCharacter` med gyldigt input, for kort navn, forkerte typer, ukendt rolle, tom planet og manglende body
+* `tests/characterRepository.test.js`: tester `getAll` (kopi af arrayet), `getById` og `add` (unikt id fra tælleren)
+* `postman/`: Postman Collection med test scripts, som kører mod den kørende server
+
+Vi tester lagene hver for sig, hvor det er muligt, og hele kæden fra request til svar i `api.test.js`.
 
 ## Kode review (issue 8)
 
@@ -140,10 +159,32 @@ Kort beskrivelse af de tests, der er lavet.
 
 ### 1. Hvilken arkitektur har I valgt, og hvorfor?
 
+Vi har valgt en lagdelt arkitektur med controller, service og repository, og middleware til logning, 404 og fejlhåndtering. Hvert lag har ét ansvar: controlleren håndterer HTTP og validerer input, servicen har reglerne, og repositoryet er det eneste, der kender arrayet. Det gør koden nem at overskue og nem at teste, fordi lagene kan testes hver for sig. Repositoryet kan også skiftes ud med en fil eller en database uden at ændre service og controller. Strukturen kender vi fra To Do Taming.
+
 ### 2. Hvad ville I ændre, hvis applikationen skulle bruges af mange brugere?
+
+* **Gemme data i en database.** I dag ligger karaktererne i en array og forsvinder ved genstart. Det er kun repositoryet, der skal ændres
+* **Tilføje login og rettigheder,** så ikke alle kan slette og ændre
+* **Vise karaktererne på sider,** så `GET /characters` ikke sender alle hver gang
 
 ### 3. Hvilke fejl fandt I under udvikling og test?
 
+* `req.params.id` er tekst og skal laves til tal, ellers finder man ingen karakter
+* Id'et ud fra `Date.now()` kan blive ens for to oprettelser i samme millisekund. Det blev til en tæller i repositoryet
+* Valideringsfunktionerne lå først inde i controller funktionen, så `validateCharacter` ikke kunne eksporteres
+* En `handleCreate`, der aldrig sendte et svar ved gyldigt input, så requesten hang
+* `nodemon` kom ved en fejl ind i `package.json` og blev fjernet igen
+* Mat testede, hvad der sker uden `next()` i `logger`: requesten ventede og nåede aldrig routen
+
 ### 4. Hvilken forbedring gennemførte I efter kode review?
 
+(Udfyldes efter issue 8)
+
 ### 5. Hvad lærte I om samspillet mellem frontend og backend?
+
+* Frontenden og backend'en taler sammen med HTTP og JSON
+* `fetch` kaster ikke en fejl ved 400 eller 404, så vi tjekker `response.ok` selv
+* Ved POST skal vi sende `Content-Type: application/json`, ellers kan serveren ikke læse body
+* Backend'en skal validere, selv om frontenden har en formular, fordi alle kan kalde API'et direkte, fx fra Postman
+* Vi bruger `textContent` og ikke `innerHTML`, så input fra brugeren ikke bliver til kode på siden
+* Network fanen viser metode, status, headers og body, og den hjalp os med at fejlfinde
