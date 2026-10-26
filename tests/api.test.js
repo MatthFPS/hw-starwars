@@ -126,3 +126,32 @@ test('getOne_unknownId_returns404', async (t) => {
     assert.equal(response.status, 404);
     assert.deepEqual(body, { error: 'Character not found' });
 });
+
+test('getDownload_existingCharacters_returnsTextFileAttachment', async (t) => {
+    // Arrange
+    const baseUrl = startTestServer(t, [
+        { id: 1, name: 'Luke Skywalker', role: 'Jedi', planet: 'Tatooine' },
+        { id: 2, name: 'Darth Vader', role: 'Sith', planet: 'Mustafar' },
+    ]);
+
+    // Act
+    const response = await fetch(`${baseUrl}/download`);
+
+    // Assert
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-disposition'), /characters\.txt/);
+    assert.match(response.headers.get('content-type'), /text\/plain/);
+    assert.equal(await response.text(), 'Luke Skywalker (Jedi) - Tatooine\nDarth Vader (Sith) - Mustafar');
+});
+
+test('getGoToLuke_anyRequest_redirectsToCharacterOne', async (t) => {
+    // Arrange
+    const baseUrl = startTestServer(t);
+
+    // Act
+    const response = await fetch(`${baseUrl}/go-to-luke`, { redirect: 'manual' });
+
+    // Assert
+    assert.equal(response.status, 302);
+    assert.equal(response.headers.get('location'), '/characters/1');
+});
