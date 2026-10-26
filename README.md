@@ -51,6 +51,16 @@ Hver skriver sit eget afsnit her i sin pull request: hvad blev lavet, hvilke fej
 ### Gon
 
 ### Mat
+Hvad jeg lavet:
+middleware:
+- Lavet errorHandler middleware således at når programmet køres og noget fejler for vi en fejlbesked.
+- errorHandler håndterer fejl i Express, logger dem og sender passende HTTP-fejlbeskeder (400 ved ugyldig JSON og 500 ved serverfejl).
+- lavet logger middleware således at vi kan se hvad der sker i vores program.
+- logger hver HTTP-forespørgsels metode og URL i konsollen og sender derefter forespørgslen videre med next().
+- lavet notFound middleware således at vi får en 404 fejl hvis vi prøver at tilgå en route der ikke findes.
+- notFound giver en 404 fejl hvis routen ikke kan tilgås.
+Tests:
+- lavet derudover også api.tests som alle fire er grønne.
 
 ## Tests
 
