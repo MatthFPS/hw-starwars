@@ -11,11 +11,22 @@ function clearError() {
   errorMessage.hidden = true;
 }
 
+function createCharacterItem(character) {
+  const item = document.createElement('li');
+  item.className = 'list-group-item';
+  item.textContent = `${character.name} (${character.role}) - ${character.planet}`;
+  return item;
+}
+
 async function loadCharacters() {
   try {
-    // TODO issue 3: fetch('/characters') and show name, role and planet with textContent
     clearError();
-    characterList.replaceChildren();
+    const response = await fetch('/characters');
+    if (!response.ok) {
+      throw new Error('Failed to fetch characters');
+    }
+    const characters = await response.json();
+    characterList.replaceChildren(...characters.map(createCharacterItem));
   } catch {
     showError('Der opstod en fejl ved hentning af karakterer.');
   }
