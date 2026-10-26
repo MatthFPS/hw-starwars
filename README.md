@@ -40,7 +40,46 @@ Flere regler står i [AGENTS.md](AGENTS.md), test reglerne i [docs/unit-test-gui
 
 ## Arkitektur (issue 1)
 
-Her kommer Mermaid diagrammet og begrundelsen: hvorfor arkitekturen, hvordan ansvaret er fordelt, fordele og ulemper, hvad der fungerer godt, og hvad vi ville ændre, hvis projektet voksede.
+```mermaid
+flowchart TD
+    Browser["Browser (fetch) og Postman"] --> App["app.js: middleware og routes"]
+    App --> Controller["Controller: input, validering, statuskode"]
+    App --> Errors["notFound og errorHandler"]
+    Controller --> Service["Service: regler"]
+    Service --> Repository["Repository: array i hukommelsen"]
+```
+
+Rækkefølgen i `app.js`: logger, `express.json()`, `express.static`, routes under `/characters`, `notFound`, `errorHandler`.
+
+### Svar på opgavens spørgsmål
+
+* **Hvor håndteres HTTP requests?** I controlleren. Den læser `req`, tjekker input og vælger statuskode. `app.js` kobler URL og metode til de rigtige funktioner.
+* **Hvor gemmes karakterdata?** I repositoryet, i en array i hukommelsen.
+* **Hvor placeres valideringen?** I controlleren, i funktionen `validateCharacter`. Det er input fra HTTP, og det giver 400. Så kan servicen regne med, at data er gyldigt.
+* **Fordele:** Hvert lag har ét ansvar. Lagene kan testes hver for sig. Repositoryet kan skiftes til en fil eller en database uden at ændre service og controller. Strukturen kender vi fra To Do Taming.
+* **Ulemper:** Til en lille opgave er servicen tynd og gør ikke meget mere end at give data videre og finde en karakter. Der er flere filer, end der strengt taget er brug for. Validering i controlleren kan ikke genbruges, hvis der kommer en anden indgang end HTTP. Karaktererne forsvinder, når serveren genstartes.
+
+### Ansvarsfordeling
+
+* `app.js`: samler middleware og routes
+* Controller: HTTP, input, validering, statuskode og logning af fejl
+* Service: reglerne (find karakter, giv besked, hvis den ikke findes)
+* Repository: den eneste, der kender arrayet
+* Middleware: logning, 404 og central fejlhåndtering
+
+### Hvad fungerer godt
+
+Det er nemt at se, hvor noget hører til, og tests kan bruge et nyt repository hver gang.
+
+### Hvad vi ville ændre, hvis projektet voksede
+
+Gemme data i en database, så kun repositoryet skal ændres. Tilføje login og rettigheder. Dele routes ud i egen mappe, hvis der kommer flere ressourcer end karakterer.
+
+### Beslutninger
+
+1. **Id'er:** tælleren ligger i repositoryet, og `add` giver id'et i én operation. Servicen læser ikke først alle karakterer for at finde et nyt id. Det samme gælder PUT og DELETE: de er én operation i repositoryet.
+2. **Sprog i fejlbeskeder:** engelsk i API'et, dansk i frontenden.
+3. **Validering:** en funktion `validateCharacter` i controlleren.
 
 ## Mit stykke (skriv under dit eget navn)
 
