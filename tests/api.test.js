@@ -1,12 +1,26 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const express = require('express');
 const { createApp } = require('../src/app');
 const { createCharacterRepository } = require('../src/repositories/characterRepository');
+const { errorHandler } = require('../src/middleware/errorHandler');
+const { logger } = require('../src/middleware/logger');
 
 // The in-memory repository is its own fake: every test gets a fresh one.
 function startTestServer(t, initialCharacters = []) {
     const characterRepository = createCharacterRepository(initialCharacters);
     const app = createApp({ characterRepository });
+    const server = app.listen(0);
+    t.after(() => server.close());
+    return `http://localhost:${server.address().port}`;
+}
+
+function startErrorTestServer(t) {
+    const app = express();
+    app.get('/unexpected-error', async () => {
+        throw new Error('Sensitive error details');
+    });
+    app.use(errorHandler);
     const server = app.listen(0);
     t.after(() => server.close());
     return `http://localhost:${server.address().port}`;
@@ -21,6 +35,66 @@ test('getUnknownRoute_unmatchedPath_returns404', async (t) => {
 
     // Assert
     assert.equal(response.status, 404);
+    assert.deepEqual(await response.json(), { error: 'Route not found' });
+});
+
+test('logger_request_logsMethodAndUrlAndCallsNext', () => {
+    // Arrange
+    const originalConsoleLog = console.log;
+    const loggedMessages = [];
+    let nextWasCalled = false;
+    console.log = (message) => loggedMessages.push(message);
+
+    // Act
+    try {
+        logger({ method: 'GET', url: '/characters' }, {}, () => {
+            nextWasCalled = true;
+        });
+    } finally {
+        console.log = originalConsoleLog;
+    }
+
+    // Assert
+    assert.deepEqual(loggedMessages, ['GET /characters']);
+    assert.equal(nextWasCalled, true);
+});
+
+test('errorHandler_invalidJson_returns400', async (t) => {
+    // Arrange
+    const baseUrl = startTestServer(t);
+
+    // Act
+    const response = await fetch(`${baseUrl}/characters`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{"name":',
+    });
+
+    // Assert
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { error: 'Invalid JSON' });
+});
+
+test('errorHandler_unexpectedError_returnsFixed500AndLogsRealError', async (t) => {
+    // Arrange
+    const baseUrl = startErrorTestServer(t);
+    const originalConsoleError = console.error;
+    const loggedErrors = [];
+    console.error = (error) => loggedErrors.push(error);
+
+    // Act
+    try {
+        const response = await fetch(`${baseUrl}/unexpected-error`);
+        const responseBody = await response.json();
+
+        // Assert
+        assert.equal(response.status, 500);
+        assert.deepEqual(responseBody, { error: 'Internal server error' });
+        assert.equal(loggedErrors.length, 1);
+        assert.equal(loggedErrors[0].message, 'Sensitive error details');
+    } finally {
+        console.error = originalConsoleError;
+    }
 });
 
 // TODO: add tests for each issue next to the code you write (see docs/unit-test-guide.md).
