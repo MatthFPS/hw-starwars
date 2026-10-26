@@ -42,7 +42,7 @@ function validateCharacter(body) {
 
 /**
  * Creates HTTP handlers for character operations.
- * @param {{ getAllCharacters: () => Promise<object[]>, getCharacterById: (id: number) => Promise<object | null> }} characterService
+ * @param {{ getAllCharacters: () => Promise<object[]>, getCharacterById: (id: number) => Promise<object | null>, createCharacter: (data: object) => Promise<object> }} characterService
  */
 function createCharacterController(characterService) {
     // Example of the pattern: call the service, answer 200, and on errors log the real
@@ -70,8 +70,20 @@ function createCharacterController(characterService) {
         }
     };
 
-    // TODO issue 4: validate with validateCharacter, create, 201
-    const handleCreate = async (req, res) => notImplemented(res);
+    const handleCreate = async (req, res) => {
+        const validationError = validateCharacter(req.body);
+        if (validationError) {
+            return res.status(400).json({ error: validationError });
+        }
+        try {
+
+            const newCharacter = await characterService.createCharacter(req.body);
+            return res.status(201).json(newCharacter);
+        } catch (error) {
+            console.error('Failed to create the character:', error);
+            return res.status(500).json({ error: 'Could not create the character' });
+        }
+    };
 
     // TODO issue 5: validate all fields, replace, 200 or 404
     const handleReplace = async (req, res) => notImplemented(res);
