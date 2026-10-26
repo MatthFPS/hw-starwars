@@ -107,6 +107,20 @@ Undersøg (Network fanen):
 * Body: JSON array med `id`, `name`, `role` og `planet`
 * JSON til elementer: `response.json()` giver et array, `map` laver en `<li>` pr. karakter, og `replaceChildren` sætter dem ind. Vi bruger `textContent`, ikke `innerHTML`.
 
+**Issue 6: download og redirect**
+
+Hvad jeg lavede:
+* GET `/download` henter alle karakterer og sender dem som tekstfilen `characters.txt`, én linje pr. karakter. `res.attachment` får browseren til at hente filen i stedet for at vise den
+* GET `/go-to-luke` svarer med en redirect til `/characters/1`
+* Tests: download (200, filnavn, type og indhold) og redirect (302 og `Location`)
+
+Fejl jeg fandt:
+* (skriv her, hvis du fandt noget. Ellers slet afsnittet)
+
+Undersøg (Network fanen):
+* `/download`: svaret har headeren `Content-Disposition: attachment; filename="characters.txt"` og typen `text/plain`
+* `/go-to-luke`: først status 302 med en `Location` header, derefter henter browseren `/characters/1` med et nyt GET og får 200
+
 ### Gon
 
 ### Mat
