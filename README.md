@@ -81,7 +81,7 @@ middleware:
 - notFound giver en 404 fejl hvis routen ikke kan tilgås.
 Tests:
 - lavet derudover også api.tests som alle fire er grønne.
-- Jeg testede midlertidigt uden next() med en lokal HTTP-request i stedet for Postman: requesten ventede, indtil klienten afbrød den, og nåede ikke routen. next() er sat tilbage.
+
 
 ## Tests
 
