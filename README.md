@@ -81,7 +81,12 @@ middleware:
 - notFound giver en 404 fejl hvis routen ikke kan tilgås.
 Tests:
 - lavet derudover også api.tests som alle fire er grønne.
+- Jeg testede midlertidigt uden next() med en lokal HTTP-request i stedet for Postman: requesten ventede, indtil klienten afbrød den, og nåede ikke routen. next() er sat tilbage.
 
+Refleksion over 400,404,500:
+-400: Bad request, serveren forstår ikke requesten, typisk fordi den er ugyldig. Vi bruger det, når JSON ikke kan parses.
+-404: Not found, serveren kan ikke finde det, der efterspørges. i koden er det typisk fordi id'et ikke findes i arrayet. Vi bruger det, når en karakter ikke findes.
+-500: Internal server error, serveren fejler, typisk fordi der er en fejl i koden. Vi bruger det, når der sker en uventet fejl.
 
 ## Tests
 
