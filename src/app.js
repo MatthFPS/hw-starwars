@@ -26,7 +26,17 @@ function createApp({ characterRepository }) {
     router.put('/:id', characterController.handleReplace);
     router.delete('/:id', characterController.handleDelete);
     app.use('/characters', router);
-    // TODO issue 6: add GET /download and GET /go-to-luke here
+    app.get('/download', async (req, res) => {
+        const characters = await characterService.getAllCharacters();
+        const rebels = characters.filter((c) => c.role === 'Rebel');
+        const text = rebels.map(c => `${c.name} (${c.role}) - ${c.planet}`).join('\n');
+        res.attachment('characters.txt');
+        res.type('text/plain');
+        res.send(text);
+    });
+    app.get('/go-to-luke', (req, res) => {
+        res.redirect('/characters/1');
+    });
     app.use(notFound);
     app.use(errorHandler);
 

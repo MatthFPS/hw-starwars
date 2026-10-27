@@ -13,13 +13,34 @@ const DEFAULT_CHARACTERS = [
  */
 function createCharacterRepository(initialCharacters = DEFAULT_CHARACTERS) {
     const characters = [...initialCharacters];
+    let nextId = Math.max(0, ...characters.map((c) => c.id)) + 1;
 
     return {
         // Example of the pattern: copy the array, so callers cannot change it by accident.
         getAll: async () => [...characters],
-        // TODO issue 3: getById(id) returns the character or undefined
-        // TODO issue 4: add(character) with a unique id (not the array length)
-        // TODO issue 5: replace(id, character) and remove(id)
+        getById: async (id) => characters.find((c) => c.id === id),
+        add: async (character) => {
+            const newCharacter = { ...character, id: nextId++ };
+            characters.push(newCharacter);
+            return newCharacter;
+        },
+        replace: async (id, character) => {
+            const index = characters.findIndex((existingCharacter) => existingCharacter.id === id);
+            if (index === -1) {
+                return undefined;
+            }
+            const updatedCharacter = { ...character, id };
+            characters[index] = updatedCharacter;
+            return updatedCharacter;
+        },
+        remove: async (id) => {
+            const index = characters.findIndex((character) => character.id === id);
+            if (index === -1) {
+                return false;
+            }
+            characters.splice(index, 1);
+            return true;
+        },
     };
 }
 
