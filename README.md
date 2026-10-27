@@ -167,6 +167,8 @@ Refleksion over 400,404,500:
 -404: Not found, serveren kan ikke finde det, der efterspørges. i koden er det typisk fordi id'et ikke findes i arrayet. Vi bruger det, når en karakter ikke findes.
 -500: Internal server error, serveren fejler, typisk fordi der er en fejl i koden. Vi bruger det, når der sker en uventet fejl.
 
+Hvorfor skal serveren ikke returnere 500, blot fordi en karakter ikke findes?
+404 betyder, at forespørgslen var gyldig, men ressourcen findes ikke. Det er et forventet udfald, som klienten selv kan rette ved at bruge et andet ID. 500 betyder, at serveren fejlede uventet, så hvis en manglende karakter gav 500, kunne klienten ikke skelne mellem en forkert ID og en reel serverfejl. Det ville også fylde overvågningen med falske alarmer, så de rigtige fejl blev svære at få øje på.
 
 Issue 5:
 Hvad jeg lavet:
