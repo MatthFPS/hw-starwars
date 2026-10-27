@@ -163,6 +163,14 @@ function postCharacter(baseUrl, body) {
     });
 }
 
+function putCharacter(baseUrl, id, body) {
+    return fetch(`${baseUrl}/characters/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+}
+
 test('postCharacter_validBody_returns201WithNewCharacter', async (t) => {
     // Arrange
     const baseUrl = startTestServer(t);
@@ -207,4 +215,77 @@ test('postCharacter_invalidRole_returns400WithError', async (t) => {
     // Assert
     assert.equal(response.status, 400);
     assert.deepEqual(await response.json(), { error: 'Role must be Jedi, Sith, Rebel or Smuggler' });
+});
+
+test('putCharacter_validBody_replacesCharacterUsingUrlId', async (t) => {
+    // Arrange
+    const anotherCharacter = { id: 2, name: 'Han Solo', role: 'Smuggler', planet: 'Corellia' };
+    const baseUrl = startTestServer(t, [luke, anotherCharacter]);
+
+    // Act
+    const response = await putCharacter(baseUrl, 1, {
+        id: 99,
+        name: '  Yoda  ',
+        role: 'Jedi',
+        planet: ' Dagobah ',
+    });
+
+    // Assert
+    assert.equal(response.status, 200);
+    const updatedCharacter = { id: 1, name: 'Yoda', role: 'Jedi', planet: 'Dagobah' };
+    assert.deepEqual(await response.json(), updatedCharacter);
+    const updatedResponse = await fetch(`${baseUrl}/characters/1`);
+    assert.deepEqual(await updatedResponse.json(), updatedCharacter);
+    const unchangedResponse = await fetch(`${baseUrl}/characters/2`);
+    assert.deepEqual(await unchangedResponse.json(), anotherCharacter);
+});
+
+test('putCharacter_missingField_returns400', async (t) => {
+    // Arrange
+    const baseUrl = startTestServer(t, [luke]);
+
+    // Act
+    const response = await putCharacter(baseUrl, 1, { name: 'Yoda', role: 'Jedi' });
+
+    // Assert
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { error: 'Planet must be text' });
+});
+
+test('putCharacter_unknownId_returns404EvenWithInvalidBody', async (t) => {
+    // Arrange
+    const baseUrl = startTestServer(t, [luke]);
+
+    // Act
+    const response = await putCharacter(baseUrl, 999, { name: 'Yoda' });
+
+    // Assert
+    assert.equal(response.status, 404);
+    assert.deepEqual(await response.json(), { error: 'Character not found' });
+});
+
+test('deleteCharacter_existingId_returns204WithoutBody', async (t) => {
+    // Arrange
+    const baseUrl = startTestServer(t, [luke]);
+
+    // Act
+    const response = await fetch(`${baseUrl}/characters/1`, { method: 'DELETE' });
+
+    // Assert
+    assert.equal(response.status, 204);
+    assert.equal(await response.text(), '');
+    const deletedResponse = await fetch(`${baseUrl}/characters/1`);
+    assert.equal(deletedResponse.status, 404);
+});
+
+test('deleteCharacter_unknownId_returns404', async (t) => {
+    // Arrange
+    const baseUrl = startTestServer(t, [luke]);
+
+    // Act
+    const response = await fetch(`${baseUrl}/characters/999`, { method: 'DELETE' });
+
+    // Assert
+    assert.equal(response.status, 404);
+    assert.deepEqual(await response.json(), { error: 'Character not found' });
 });

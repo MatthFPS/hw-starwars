@@ -1,5 +1,3 @@
-const notImplemented = (res) => res.status(501).json({ error: 'Not implemented' });
-
 const ALLOWED_ROLES = ['Jedi', 'Sith', 'Rebel', 'Smuggler'];
 
 // Returns an error message, or null if the name is valid
@@ -40,9 +38,49 @@ function validateCharacter(body) {
     return validateName(body.name) || validateRole(body.role) || validatePlanet(body.planet);
 }
 
+function createReplaceHandler(characterService) {
+    return async (req, res) => {
+        try {
+            const id = Number(req.params.id);
+            const existingCharacter = await characterService.getCharacterById(id);
+            if (!existingCharacter) {
+                return res.status(404).json({ error: 'Character not found' });
+            }
+            const validationError = validateCharacter(req.body);
+            if (validationError) {
+                return res.status(400).json({ error: validationError });
+            }
+            const updatedCharacter = await characterService.replaceCharacter(id, req.body);
+            if (!updatedCharacter) {
+                return res.status(404).json({ error: 'Character not found' });
+            }
+            return res.status(200).json(updatedCharacter);
+        } catch (error) {
+            console.error('Failed to replace the character:', error);
+            return res.status(500).json({ error: 'Could not replace the character' });
+        }
+    };
+}
+
+function createDeleteHandler(characterService) {
+    return async (req, res) => {
+        try {
+            const id = Number(req.params.id);
+            const deleted = await characterService.deleteCharacter(id);
+            if (!deleted) {
+                return res.status(404).json({ error: 'Character not found' });
+            }
+            return res.status(204).end();
+        } catch (error) {
+            console.error('Failed to delete the character:', error);
+            return res.status(500).json({ error: 'Could not delete the character' });
+        }
+    };
+}
+
 /**
  * Creates HTTP handlers for character operations.
- * @param {{ getAllCharacters: () => Promise<object[]>, getCharacterById: (id: number) => Promise<object | null>, createCharacter: (data: object) => Promise<object> }} characterService
+ * @param {{ getAllCharacters: () => Promise<object[]>, getCharacterById: (id: number) => Promise<object | null>, createCharacter: (data: object) => Promise<object>, replaceCharacter: (id: number, data: object) => Promise<object | undefined>, deleteCharacter: (id: number) => Promise<boolean> }} characterService
  */
 function createCharacterController(characterService) {
     // Example of the pattern: call the service, answer 200, and on errors log the real
@@ -85,11 +123,8 @@ function createCharacterController(characterService) {
         }
     };
 
-    // TODO issue 5: validate all fields, replace, 200 or 404
-    const handleReplace = async (req, res) => notImplemented(res);
-
-    // TODO issue 5: 204 with no body, 404 if it does not exist
-    const handleDelete = async (req, res) => notImplemented(res);
+    const handleReplace = createReplaceHandler(characterService);
+    const handleDelete = createDeleteHandler(characterService);
 
     return { handleGetAll, handleGetOne, handleCreate, handleReplace, handleDelete };
 }
