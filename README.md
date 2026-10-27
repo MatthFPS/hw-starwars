@@ -131,7 +131,7 @@ Undersøg (Network fanen):
 **Issue 6: download og redirect**
 
 Hvad jeg lavede:
-* GET `/download` henter alle karakterer og sender dem som tekstfilen `characters.txt`, én linje pr. karakter. `res.attachment` får browseren til at hente filen i stedet for at vise den
+* GET `/download` henter karaktererne med rollen `Rebel` (Rebel Alliance, som opgaven beskriver) og sender dem som tekstfilen `characters.txt`, én linje pr. karakter. `res.attachment` får browseren til at hente filen i stedet for at vise den
 * GET `/go-to-luke` svarer med en redirect til `/characters/1`
 * Tests: download (200, filnavn, type og indhold) og redirect (302 og `Location`)
 
