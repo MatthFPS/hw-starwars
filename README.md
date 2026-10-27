@@ -128,12 +128,10 @@ Fejl jeg fandt:
 * Valideringsfunktionerne lå først inde i `createCharacterController`, så `validateCharacter` ikke kunne eksporteres. De flyttede jeg ud
 * Min første `handleCreate` gav aldrig et svar ved gyldigt input, så requesten hang
 
-Undersøg (Network fanen):
-* Metode og URL: POST `/characters`
-* Headers: `Content-Type: application/json`, ellers kan `express.json()` ikke læse body
-* Body: JSON med `name`, `role` og `planet`
-* Svar: 201 med karakteren og det nye `id`, eller 400 med `{ "error": "..." }`
-* Frontenden: `response.ok` tjekkes, og ved fejl vises `data.error` i den røde boks
+Undersøg:
+* Hvorfor er arrayets længde en dårlig id? Hvis man sletter en karakter, kan næste karakter få et id, der allerede har været brugt. Vi bruger en tæller (`nextId++`), som ikke afhænger af arrayets længde
+* Hvad sker der ved genstart? Karaktererne ligger kun i hukommelsen, så ændringer nulstilles
+* Ekstra eksperiment, `"name": 123`: `validateName` tjekker, at `name` er tekst, og serveren svarer 400 med "Name must be text". Den går ikke ned. Postman request 8 tester det, og request 10 viser, at data er uændret
 
 **Issue 6: download og redirect**
 
@@ -142,9 +140,10 @@ Hvad jeg lavede:
 * GET `/go-to-luke` svarer med en redirect til `/characters/1`
 * Tests: download (200, filnavn, type og indhold) og redirect (302 og `Location`)
 
-Undersøg (Network fanen):
-* `/download`: svaret har headeren `Content-Disposition: attachment; filename="characters.txt"` og typen `text/plain`
-* `/go-to-luke`: først status 302 med en `Location` header, derefter henter browseren `/characters/1` med et nyt GET og får 200
+Undersøg:
+* `res.download()` sender en fil fra disken, så browseren henter den. Vi bruger `res.attachment()` og `res.send()`, fordi vi selv laver teksten og ikke har en fil
+* `res.redirect()` svarer med status 302 og en `Location` header, og browseren sender selv en ny GET til den adresse
+* En request får kun ét svar. Download og redirect er to forskellige svar, og når det første er sendt, er forbindelsen færdig. Et andet svar giver fejlen `ERR_HTTP_HEADERS_SENT`
 
 ### Gon
 
@@ -190,6 +189,7 @@ Kør alle tests og lint med `npm run check`. Testene bruger Nodes indbyggede `no
     * `logger` og `errorHandler` (400 ved ugyldig JSON, fast 500 uden detaljer)
     * GET `/characters/:id` (200 og 404)
     * POST `/characters` (201, trim, id fra klienten ignoreres, 400)
+    * PUT `/characters/:id` og DELETE `/characters/:id` (200, 400 og 404 for PUT, 204 og 404 for DELETE)
     * `/download` og `/go-to-luke`
 * `tests/characterController.test.js`: tester `validateCharacter` med gyldigt input, for kort navn, forkerte typer, ukendt rolle, tom planet og manglende body
 * `tests/characterRepository.test.js`: tester `getAll` (kopi af arrayet), `getById` og `add` (unikt id fra tælleren)
