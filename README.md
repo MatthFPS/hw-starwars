@@ -142,6 +142,8 @@ Undersøg (Network fanen):
 ### Gon
 
 ### Mat
+
+Issue 2:
 Hvad jeg lavet:
 middleware:
 - Lavet errorHandler middleware således at når programmet køres og noget fejler for vi en fejlbesked.
@@ -158,6 +160,19 @@ Refleksion over 400,404,500:
 -400: Bad request, serveren forstår ikke requesten, typisk fordi den er ugyldig. Vi bruger det, når JSON ikke kan parses.
 -404: Not found, serveren kan ikke finde det, der efterspørges. i koden er det typisk fordi id'et ikke findes i arrayet. Vi bruger det, når en karakter ikke findes.
 -500: Internal server error, serveren fejler, typisk fordi der er en fejl i koden. Vi bruger det, når der sker en uventet fejl.
+
+
+Issue 5:
+Hvad jeg lavet:
+-Repository: Tilføjet funktioner til at erstatte og slette karakterer efter ID.
+-Service: Tilføjet håndtering af erstatning og sletning, hvor URL’ens ID bevares.
+-Controller: Implementeret PUT med validering og svarene 200/400/404 samt DELETE med 204/404.
+
+Tests:
+lavet tests for PUT (200, 404, 400) og DELETE (204, 404). som alle er grønne.
+
+Refleksion over hvad der sker med karakter når server genstartes:
+Karaktererne ligger kun i en array i serverens hukommelse, ikke i en database eller fil. Når serveren genstartes, nulstilles ændringer fra POST, PUT og DELETE: nye karakterer forsvinder, ændrede går tilbage til standardværdierne, og slettede standardkarakterer kommer tilbage.
 
 ## Tests
 

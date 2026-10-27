@@ -24,7 +24,23 @@ function createCharacterRepository(initialCharacters = DEFAULT_CHARACTERS) {
             characters.push(newCharacter);
             return newCharacter;
         },
-        // TODO issue 5: replace(id, character) and remove(id)
+        replace: async (id, character) => {
+            const index = characters.findIndex((existingCharacter) => existingCharacter.id === id);
+            if (index === -1) {
+                return undefined;
+            }
+            const updatedCharacter = { ...character, id };
+            characters[index] = updatedCharacter;
+            return updatedCharacter;
+        },
+        remove: async (id) => {
+            const index = characters.findIndex((character) => character.id === id);
+            if (index === -1) {
+                return false;
+            }
+            characters.splice(index, 1);
+            return true;
+        },
     };
 }
 
