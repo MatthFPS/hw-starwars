@@ -15,14 +15,21 @@ npm start
 
 ## API
 
-Udfyldes, efterhånden som endpoints bliver lavet.
+Alle svar er JSON, undtagen `/download`. Fejl har formen `{ "error": "..." }`. Fejlbeskeder fra API'et er på engelsk.
 
-* GET `/characters`: hent alle
-* GET `/characters/:id`: hent én
-* POST `/characters`: opret
-* PUT `/characters/:id`: erstat
-* DELETE `/characters/:id`: slet
-* GET `/download` og GET `/go-to-luke`
+| Metode og URL | Body | Svar |
+| --- | --- | --- |
+| GET `/characters` | | 200 med et array af karakterer |
+| GET `/characters/:id` | | 200 med karakteren, 404 hvis id'et ikke findes |
+| POST `/characters` | `{ name, role, planet }` | 201 med den nye karakter (serveren vælger id), 400 ved ugyldigt input |
+| PUT `/characters/:id` | `{ name, role, planet }` | 200 med den erstattede karakter, 400 ved ugyldigt input, 404 hvis id'et ikke findes |
+| DELETE `/characters/:id` | | 204 uden body, 404 hvis id'et ikke findes |
+| GET `/download` | | 200, tekstfilen `characters.txt` |
+| GET `/go-to-luke` | | 302 redirect til `/characters/1` |
+
+Gyldigt input: `name` er tekst med mindst 2 tegn efter trim, `role` er Jedi, Sith, Rebel eller Smuggler, og `planet` er tekst og ikke tom.
+
+Andre fejl: ukendt route giver 404 `{ "error": "Route not found" }`, ugyldig JSON giver 400 `{ "error": "Invalid JSON" }`, og uventede fejl giver 500 `{ "error": "Internal server error" }`.
 
 ## Struktur
 
@@ -63,7 +70,7 @@ Rækkefølgen i `app.js`: logger, `express.json()`, `express.static`, routes und
 
 * `app.js`: samler middleware og routes
 * Controller: HTTP, input, validering, statuskode og logning af fejl
-* Service: reglerne (find karakter, giv besked, hvis den ikke findes)
+* Service: reglerne (find karakter, rens og opret, erstat, slet). `toCleanCharacter` trimmer tekst og kopierer kun de tre felter
 * Repository: den eneste, der kender arrayet
 * Middleware: logning, 404 og central fejlhåndtering
 
@@ -121,12 +128,10 @@ Fejl jeg fandt:
 * Valideringsfunktionerne lå først inde i `createCharacterController`, så `validateCharacter` ikke kunne eksporteres. De flyttede jeg ud
 * Min første `handleCreate` gav aldrig et svar ved gyldigt input, så requesten hang
 
-Undersøg (Network fanen):
-* Metode og URL: POST `/characters`
-* Headers: `Content-Type: application/json`, ellers kan `express.json()` ikke læse body
-* Body: JSON med `name`, `role` og `planet`
-* Svar: 201 med karakteren og det nye `id`, eller 400 med `{ "error": "..." }`
-* Frontenden: `response.ok` tjekkes, og ved fejl vises `data.error` i den røde boks
+Undersøg:
+* Hvorfor er arrayets længde en dårlig id? Hvis man sletter en karakter, kan næste karakter få et id, der allerede har været brugt. Vi bruger en tæller (`nextId++`), som ikke afhænger af arrayets længde
+* Hvad sker der ved genstart? Karaktererne ligger kun i hukommelsen, så ændringer nulstilles
+* Ekstra eksperiment, `"name": 123`: `validateName` tjekker, at `name` er tekst, og serveren svarer 400 med "Name must be text". Den går ikke ned. Postman request 8 tester det, og request 10 viser, at data er uændret
 
 **Issue 6: download og redirect**
 
@@ -135,9 +140,10 @@ Hvad jeg lavede:
 * GET `/go-to-luke` svarer med en redirect til `/characters/1`
 * Tests: download (200, filnavn, type og indhold) og redirect (302 og `Location`)
 
-Undersøg (Network fanen):
-* `/download`: svaret har headeren `Content-Disposition: attachment; filename="characters.txt"` og typen `text/plain`
-* `/go-to-luke`: først status 302 med en `Location` header, derefter henter browseren `/characters/1` med et nyt GET og får 200
+Undersøg:
+* `res.download()` sender en fil fra disken, så browseren henter den. Vi bruger `res.attachment()` og `res.send()`, fordi vi selv laver teksten og ikke har en fil
+* `res.redirect()` svarer med status 302 og en `Location` header, og browseren sender selv en ny GET til den adresse
+* En request får kun ét svar. Download og redirect er to forskellige svar, og når det første er sendt, er forbindelsen færdig. Et andet svar giver fejlen `ERR_HTTP_HEADERS_SENT`
 
 **Issue 7: Postman**
 
@@ -172,6 +178,8 @@ Refleksion over 400,404,500:
 -404: Not found, serveren kan ikke finde det, der efterspørges. i koden er det typisk fordi id'et ikke findes i arrayet. Vi bruger det, når en karakter ikke findes.
 -500: Internal server error, serveren fejler, typisk fordi der er en fejl i koden. Vi bruger det, når der sker en uventet fejl.
 
+Hvorfor skal serveren ikke returnere 500, blot fordi en karakter ikke findes?
+404 betyder, at forespørgslen var gyldig, men ressourcen findes ikke. Det er et forventet udfald, som klienten selv kan rette ved at bruge et andet ID. 500 betyder, at serveren fejlede uventet, så hvis en manglende karakter gav 500, kunne klienten ikke skelne mellem en forkert ID og en reel serverfejl. Det ville også fylde overvågningen med falske alarmer, så de rigtige fejl blev svære at få øje på.
 
 Issue 5:
 Hvad jeg lavet:
@@ -187,7 +195,20 @@ Karaktererne ligger kun i en array i serverens hukommelse, ikke i en database el
 
 ## Tests
 
-Kort beskrivelse af de tests, der er lavet.
+Kør alle tests og lint med `npm run check`. Testene bruger Nodes indbyggede `node:test` og `node:assert`, så der er ikke installeret noget ekstra. Hver test følger Arrange, Act, Assert og hedder `metode_scenarie_forventet`, fx `postCharacter_invalidRole_returns400WithError`.
+
+* `tests/api.test.js`: starter en rigtig server med et nyt repository til hver test og kalder den med `fetch`. Dækker:
+    * 404 på ukendt route
+    * `logger` og `errorHandler` (400 ved ugyldig JSON, fast 500 uden detaljer)
+    * GET `/characters/:id` (200 og 404)
+    * POST `/characters` (201, trim, id fra klienten ignoreres, 400)
+    * PUT `/characters/:id` og DELETE `/characters/:id` (200, 400 og 404 for PUT, 204 og 404 for DELETE)
+    * `/download` og `/go-to-luke`
+* `tests/characterController.test.js`: tester `validateCharacter` med gyldigt input, for kort navn, forkerte typer, ukendt rolle, tom planet og manglende body
+* `tests/characterRepository.test.js`: tester `getAll` (kopi af arrayet), `getById` og `add` (unikt id fra tælleren)
+* `postman/`: Postman Collection med test scripts, som kører mod den kørende server
+
+Vi tester lagene hver for sig, hvor det er muligt, og hele kæden fra request til svar i `api.test.js`.
 
 ## Kode review (issue 8)
 
@@ -214,7 +235,7 @@ Accepteret:
 * **Repositoryet giver referencer til objekterne.** Rigtigt, men ingen kode ændrer dem i dag. Relevant med en database. Ikke ændret
 
 Afvist eller forældet:
-* **"Postman Collection og README afsnit mangler."** Det var rigtigt i den gren, Copilot læste, men begge ligger i åbne pull requests (Postman i #18, README i #8 og #9)
+* **"Postman Collection og README afsnit mangler."** Det var rigtigt i den gren, Copilot læste. Postman Collection er nu merged (#18), og README samles i #9
 
 Copilot fandt ikke det dobbelte opslag i `createReplaceHandler`, som vi selv fandt.
 
@@ -222,10 +243,34 @@ Copilot fandt ikke det dobbelte opslag i `createReplaceHandler`, som vi selv fan
 
 ### 1. Hvilken arkitektur har I valgt, og hvorfor?
 
+Vi har valgt en lagdelt arkitektur med controller, service og repository, og middleware til logning, 404 og fejlhåndtering. Hvert lag har ét ansvar: controlleren håndterer HTTP og validerer input, servicen har reglerne, og repositoryet er det eneste, der kender arrayet. Det gør koden nem at overskue og nem at teste, fordi lagene kan testes hver for sig. Repositoryet kan også skiftes ud med en fil eller en database uden at ændre service og controller. Strukturen kender vi fra To Do Taming.
+
 ### 2. Hvad ville I ændre, hvis applikationen skulle bruges af mange brugere?
+
+* **Gemme data i en database.** I dag ligger karaktererne i en array og forsvinder ved genstart. Det er kun repositoryet, der skal ændres
+* **Tilføje login og rettigheder,** så ikke alle kan slette og ændre
+* **Vise karaktererne på sider,** så `GET /characters` ikke sender alle hver gang
 
 ### 3. Hvilke fejl fandt I under udvikling og test?
 
+* `req.params.id` er tekst og skal laves til tal, ellers finder man ingen karakter
+* Id'et ud fra `Date.now()` kan blive ens for to oprettelser i samme millisekund. Det blev til en tæller i repositoryet
+* Valideringsfunktionerne lå først inde i controller funktionen, så `validateCharacter` ikke kunne eksporteres
+* En `handleCreate`, der aldrig sendte et svar ved gyldigt input, så requesten hang
+* `nodemon` kom ved en fejl ind i `package.json` og blev fjernet igen
+* Mat testede, hvad der sker uden `next()` i `logger`: requesten ventede og nåede aldrig routen
+
 ### 4. Hvilken forbedring gennemførte I efter kode review?
 
+Vi gennemførte forbedringen "duplikeret trim i servicen". `createCharacter` og `replaceCharacter` byggede begge det samme objekt: trim af navn og planet og kun de tre felter. Vi samlede det i en funktion, `toCleanCharacter()`, som begge metoder bruger.
+
+Fordelen er, at reglen for datarensning nu står ét sted. Hvis reglerne ændrer sig, fx hvis vi også vil trimme `role`, skal vi kun rette i `toCleanCharacter()`, og både POST og PUT følger med. Det betyder også, at de to metoder altid behandler data på samme måde. Alle tests var grønne både før og efter ændringen, så funktionaliteten er den samme.
+
 ### 5. Hvad lærte I om samspillet mellem frontend og backend?
+
+* Frontenden og backend'en taler sammen med HTTP og JSON
+* `fetch` kaster ikke en fejl ved 400 eller 404, så vi tjekker `response.ok` selv
+* Ved POST skal vi sende `Content-Type: application/json`, ellers kan serveren ikke læse body
+* Backend'en skal validere, selv om frontenden har en formular, fordi alle kan kalde API'et direkte, fx fra Postman
+* Vi bruger `textContent` og ikke `innerHTML`, så input fra brugeren ikke bliver til kode på siden
+* Network fanen viser metode, status, headers og body, og den hjalp os med at fejlfinde
