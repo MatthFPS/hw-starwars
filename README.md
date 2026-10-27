@@ -128,6 +128,17 @@ Undersøg (Network fanen):
 * Svar: 201 med karakteren og det nye `id`, eller 400 med `{ "error": "..." }`
 * Frontenden: `response.ok` tjekkes, og ved fejl vises `data.error` i den røde boks
 
+**Issue 6: download og redirect**
+
+Hvad jeg lavede:
+* GET `/download` henter alle karakterer og sender dem som tekstfilen `characters.txt`, én linje pr. karakter. `res.attachment` får browseren til at hente filen i stedet for at vise den
+* GET `/go-to-luke` svarer med en redirect til `/characters/1`
+* Tests: download (200, filnavn, type og indhold) og redirect (302 og `Location`)
+
+Undersøg (Network fanen):
+* `/download`: svaret har headeren `Content-Disposition: attachment; filename="characters.txt"` og typen `text/plain`
+* `/go-to-luke`: først status 302 med en `Location` header, derefter henter browseren `/characters/1` med et nyt GET og får 200
+
 ### Gon
 
 ### Mat
