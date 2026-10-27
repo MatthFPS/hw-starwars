@@ -126,3 +126,57 @@ test('getOne_unknownId_returns404', async (t) => {
     assert.equal(response.status, 404);
     assert.deepEqual(body, { error: 'Character not found' });
 });
+
+function postCharacter(baseUrl, body) {
+    return fetch(`${baseUrl}/characters`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+}
+
+test('postCharacter_validBody_returns201WithNewCharacter', async (t) => {
+    // Arrange
+    const baseUrl = startTestServer(t);
+
+    // Act
+    const response = await postCharacter(baseUrl, { name: 'Yoda', role: 'Jedi', planet: 'Dagobah' });
+
+    // Assert
+    assert.equal(response.status, 201);
+    assert.deepEqual(await response.json(), { id: 1, name: 'Yoda', role: 'Jedi', planet: 'Dagobah' });
+});
+
+test('postCharacter_spacesAroundValues_savesTrimmedValues', async (t) => {
+    // Arrange
+    const baseUrl = startTestServer(t);
+
+    // Act
+    const response = await postCharacter(baseUrl, { name: '  Yoda  ', role: 'Jedi', planet: ' Dagobah ' });
+
+    // Assert
+    assert.deepEqual(await response.json(), { id: 1, name: 'Yoda', role: 'Jedi', planet: 'Dagobah' });
+});
+
+test('postCharacter_clientSendsId_ignoresItAndCreatesOwnId', async (t) => {
+    // Arrange
+    const baseUrl = startTestServer(t);
+
+    // Act
+    const response = await postCharacter(baseUrl, { id: 99, name: 'Yoda', role: 'Jedi', planet: 'Dagobah' });
+
+    // Assert
+    assert.equal((await response.json()).id, 1);
+});
+
+test('postCharacter_invalidRole_returns400WithError', async (t) => {
+    // Arrange
+    const baseUrl = startTestServer(t);
+
+    // Act
+    const response = await postCharacter(baseUrl, { name: 'Yoda', role: 'Wookiee', planet: 'Dagobah' });
+
+    // Assert
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { error: 'Role must be Jedi, Sith, Rebel or Smuggler' });
+});
