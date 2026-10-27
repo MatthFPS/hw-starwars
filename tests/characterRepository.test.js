@@ -38,3 +38,28 @@ test('getById_unknownId_returnsUndefined', async () => {
     // Assert
     assert.strictEqual(result, undefined);
 });
+
+test('add_newCharacter_returnsCharacterWithId', async () => {
+    // Arrange
+    const repository = createCharacterRepository([]);
+
+    // Act
+    const result = await repository.add({ name: 'Yoda', role: 'Jedi', planet: 'Dagobah' });
+
+    // Assert
+    assert.deepEqual(result, { id: 1, name: 'Yoda', role: 'Jedi', planet: 'Dagobah' });
+});
+
+test('add_twoCharacters_getDifferentIds', async () => {
+    // Arrange
+    const luke = { id: 5, name: 'Luke Skywalker', role: 'Jedi', planet: 'Tatooine' };
+    const repository = createCharacterRepository([luke]);
+
+    // Act
+    const first = await repository.add({ name: 'Yoda', role: 'Jedi', planet: 'Dagobah' });
+    const second = await repository.add({ name: 'Lando', role: 'Smuggler', planet: 'Bespin' });
+
+    // Assert
+    assert.equal(first.id, 6);
+    assert.equal(second.id, 7);
+});

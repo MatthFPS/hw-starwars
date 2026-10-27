@@ -114,9 +114,43 @@ Undersøg (Network fanen):
 * Body: JSON array med `id`, `name`, `role` og `planet`
 * JSON til elementer: `response.json()` giver et array, `map` laver en `<li>` pr. karakter, og `replaceChildren` sætter dem ind. Vi bruger `textContent`, ikke `innerHTML`.
 
+**Issue 4: POST /characters, validering og formular**
+
+Hvad jeg lavede:
+* Controller: `validateCharacter` tjekker navn (mindst 2 tegn), rolle (Jedi, Sith, Rebel eller Smuggler) og planet (ikke tom). Forkerte typer giver en fejlbesked og crasher ikke. `handleCreate` svarer 400 ved fejl og 201 med den nye karakter
+* Service: `createCharacter` trimmer navn og planet og kopierer kun de tre felter, så klienten ikke selv kan vælge id
+* Repository: `add` giver id'et med en tæller i én operation
+* Frontend: formular med navn, rolle og planet. `createCharacter()` sender POST og viser serverens fejlbesked
+* Tests: `validateCharacter`, `add` og POST /characters (201, trim, id fra klient ignoreres, 400)
+
+Fejl jeg fandt:
+* Mit første forslag til id var `Date.now()`, men to oprettelser i samme millisekund kan få samme id. Det blev til en tæller
+* Valideringsfunktionerne lå først inde i `createCharacterController`, så `validateCharacter` ikke kunne eksporteres. De flyttede jeg ud
+* Min første `handleCreate` gav aldrig et svar ved gyldigt input, så requesten hang
+
+Undersøg (Network fanen):
+* Metode og URL: POST `/characters`
+* Headers: `Content-Type: application/json`, ellers kan `express.json()` ikke læse body
+* Body: JSON med `name`, `role` og `planet`
+* Svar: 201 med karakteren og det nye `id`, eller 400 med `{ "error": "..." }`
+* Frontenden: `response.ok` tjekkes, og ved fejl vises `data.error` i den røde boks
+
+**Issue 6: download og redirect**
+
+Hvad jeg lavede:
+* GET `/download` henter alle karakterer og sender dem som tekstfilen `characters.txt`, én linje pr. karakter. `res.attachment` får browseren til at hente filen i stedet for at vise den
+* GET `/go-to-luke` svarer med en redirect til `/characters/1`
+* Tests: download (200, filnavn, type og indhold) og redirect (302 og `Location`)
+
+Undersøg (Network fanen):
+* `/download`: svaret har headeren `Content-Disposition: attachment; filename="characters.txt"` og typen `text/plain`
+* `/go-to-luke`: først status 302 med en `Location` header, derefter henter browseren `/characters/1` med et nyt GET og får 200
+
 ### Gon
 
 ### Mat
+
+Issue 2:
 Hvad jeg lavet:
 middleware:
 - Lavet errorHandler middleware således at når programmet køres og noget fejler for vi en fejlbesked.
@@ -133,6 +167,19 @@ Refleksion over 400,404,500:
 -400: Bad request, serveren forstår ikke requesten, typisk fordi den er ugyldig. Vi bruger det, når JSON ikke kan parses.
 -404: Not found, serveren kan ikke finde det, der efterspørges. i koden er det typisk fordi id'et ikke findes i arrayet. Vi bruger det, når en karakter ikke findes.
 -500: Internal server error, serveren fejler, typisk fordi der er en fejl i koden. Vi bruger det, når der sker en uventet fejl.
+
+
+Issue 5:
+Hvad jeg lavet:
+-Repository: Tilføjet funktioner til at erstatte og slette karakterer efter ID.
+-Service: Tilføjet håndtering af erstatning og sletning, hvor URL’ens ID bevares.
+-Controller: Implementeret PUT med validering og svarene 200/400/404 samt DELETE med 204/404.
+
+Tests:
+lavet tests for PUT (200, 404, 400) og DELETE (204, 404). som alle er grønne.
+
+Refleksion over hvad der sker med karakter når server genstartes:
+Karaktererne ligger kun i en array i serverens hukommelse, ikke i en database eller fil. Når serveren genstartes, nulstilles ændringer fra POST, PUT og DELETE: nye karakterer forsvinder, ændrede går tilbage til standardværdierne, og slettede standardkarakterer kommer tilbage.
 
 ## Tests
 
