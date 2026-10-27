@@ -107,6 +107,27 @@ Undersøg (Network fanen):
 * Body: JSON array med `id`, `name`, `role` og `planet`
 * JSON til elementer: `response.json()` giver et array, `map` laver en `<li>` pr. karakter, og `replaceChildren` sætter dem ind. Vi bruger `textContent`, ikke `innerHTML`.
 
+**Issue 4: POST /characters, validering og formular**
+
+Hvad jeg lavede:
+* Controller: `validateCharacter` tjekker navn (mindst 2 tegn), rolle (Jedi, Sith, Rebel eller Smuggler) og planet (ikke tom). Forkerte typer giver en fejlbesked og crasher ikke. `handleCreate` svarer 400 ved fejl og 201 med den nye karakter
+* Service: `createCharacter` trimmer navn og planet og kopierer kun de tre felter, så klienten ikke selv kan vælge id
+* Repository: `add` giver id'et med en tæller i én operation
+* Frontend: formular med navn, rolle og planet. `createCharacter()` sender POST og viser serverens fejlbesked
+* Tests: `validateCharacter`, `add` og POST /characters (201, trim, id fra klient ignoreres, 400)
+
+Fejl jeg fandt:
+* Mit første forslag til id var `Date.now()`, men to oprettelser i samme millisekund kan få samme id. Det blev til en tæller
+* Valideringsfunktionerne lå først inde i `createCharacterController`, så `validateCharacter` ikke kunne eksporteres. De flyttede jeg ud
+* Min første `handleCreate` gav aldrig et svar ved gyldigt input, så requesten hang
+
+Undersøg (Network fanen):
+* Metode og URL: POST `/characters`
+* Headers: `Content-Type: application/json`, ellers kan `express.json()` ikke læse body
+* Body: JSON med `name`, `role` og `planet`
+* Svar: 201 med karakteren og det nye `id`, eller 400 med `{ "error": "..." }`
+* Frontenden: `response.ok` tjekkes, og ved fejl vises `data.error` i den røde boks
+
 **Issue 6: download og redirect**
 
 Hvad jeg lavede:

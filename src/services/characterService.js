@@ -1,6 +1,6 @@
 /**
  * Creates the character rules on top of an injected repository.
- * @param {{ getAll: () => Promise<object[]>, getById: (id: number) => Promise<object | undefined> }} characterRepository
+ * @param {{ getAll: () => Promise<object[]>, getById: (id: number) => Promise<object | undefined>, add: (character: object) => Promise<object> }} characterRepository
  */
 function createCharacterService(characterRepository) {
     return {
@@ -9,7 +9,14 @@ function createCharacterService(characterRepository) {
             const character = await characterRepository.getById(id);
             return character || null;
         },
-        // TODO issue 4: createCharacter(data), the server decides the id
+        createCharacter: async (data) => {
+            const character = {
+                name: data.name.trim(),
+                role: data.role,
+                planet: data.planet.trim()
+            };
+            return characterRepository.add(character);
+        },
         // TODO issue 5: replaceCharacter(id, data) and deleteCharacter(id)
     };
 }
