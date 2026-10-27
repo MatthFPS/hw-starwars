@@ -169,7 +169,7 @@ Hvad jeg lavet:
 -Controller: Implementeret PUT med validering og svarene 200/400/404 samt DELETE med 204/404.
 
 Tests:
-lavet tests for PUT (200, 404, 400) og DELETE (200, 404). som alle er grønne.
+lavet tests for PUT (200, 404, 400) og DELETE (204, 404). som alle er grønne.
 
 Refleksion over hvad der sker med karakter når server genstartes:
 Karaktererne ligger kun i en array i serverens hukommelse, ikke i en database eller fil. Når serveren genstartes, nulstilles ændringer fra POST, PUT og DELETE: nye karakterer forsvinder, ændrede går tilbage til standardværdierne, og slettede standardkarakterer kommer tilbage.
