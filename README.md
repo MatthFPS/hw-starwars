@@ -70,7 +70,7 @@ Rækkefølgen i `app.js`: logger, `express.json()`, `express.static`, routes und
 
 * `app.js`: samler middleware og routes
 * Controller: HTTP, input, validering, statuskode og logning af fejl
-* Service: reglerne (find karakter, giv besked, hvis den ikke findes)
+* Service: reglerne (find karakter, rens og opret, erstat, slet). `toCleanCharacter` trimmer tekst og kopierer kun de tre felter
 * Repository: den eneste, der kender arrayet
 * Middleware: logning, 404 og central fejlhåndtering
 
@@ -235,7 +235,7 @@ Accepteret:
 * **Repositoryet giver referencer til objekterne.** Rigtigt, men ingen kode ændrer dem i dag. Relevant med en database. Ikke ændret
 
 Afvist eller forældet:
-* **"Postman Collection og README afsnit mangler."** Det var rigtigt i den gren, Copilot læste, men begge ligger i åbne pull requests (Postman i #18, README i #8 og #9)
+* **"Postman Collection og README afsnit mangler."** Det var rigtigt i den gren, Copilot læste. Postman Collection er nu merged (#18), og README samles i #9
 
 Copilot fandt ikke det dobbelte opslag i `createReplaceHandler`, som vi selv fandt.
 
@@ -262,7 +262,9 @@ Vi har valgt en lagdelt arkitektur med controller, service og repository, og mid
 
 ### 4. Hvilken forbedring gennemførte I efter kode review?
 
-(Udfyldes efter issue 8)
+Vi gennemførte forbedringen "duplikeret trim i servicen". `createCharacter` og `replaceCharacter` byggede begge det samme objekt: trim af navn og planet og kun de tre felter. Vi samlede det i en funktion, `toCleanCharacter()`, som begge metoder bruger.
+
+Fordelen er, at reglen for datarensning nu står ét sted. Hvis reglerne ændrer sig, fx hvis vi også vil trimme `role`, skal vi kun rette i `toCleanCharacter()`, og både POST og PUT følger med. Det betyder også, at de to metoder altid behandler data på samme måde. Alle tests var grønne både før og efter ændringen, så funktionaliteten er den samme.
 
 ### 5. Hvad lærte I om samspillet mellem frontend og backend?
 
