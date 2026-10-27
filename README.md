@@ -139,6 +139,17 @@ Undersøg (Network fanen):
 * `/download`: svaret har headeren `Content-Disposition: attachment; filename="characters.txt"` og typen `text/plain`
 * `/go-to-luke`: først status 302 med en `Location` header, derefter henter browseren `/characters/1` med et nyt GET og får 200
 
+**Issue 7: Postman**
+
+Hvad jeg lavede:
+* En Postman Collection med 17 requests og 23 tests (`pm.test`), som kører mod den kørende server med `{{baseUrl}}`
+* Dækker GET alle og én (200, 404), POST (201 og 400 for manglende navn, ugyldig rolle, manglende planet, tal som navn og ødelagt JSON), PUT og DELETE (200, 204, 404), ukendt route (404), `/download` (200) og `/go-to-luke` (redirect, ender på Luke)
+* Request 10 tjekker, at ugyldige POST ikke ændrede data
+
+Sådan kører man den:
+* Start serveren med `npm start`, importér filen fra `postman/`, og kør den med Collection Runner. Genstart serveren før hver kørsel, så data er tilbage til de fire standardkarakterer
+* Resultat: 23 af 23 tests bestået
+
 ### Gon
 
 ### Mat
