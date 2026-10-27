@@ -145,6 +145,17 @@ Undersøg:
 * `res.redirect()` svarer med status 302 og en `Location` header, og browseren sender selv en ny GET til den adresse
 * En request får kun ét svar. Download og redirect er to forskellige svar, og når det første er sendt, er forbindelsen færdig. Et andet svar giver fejlen `ERR_HTTP_HEADERS_SENT`
 
+**Issue 7: Postman**
+
+Hvad jeg lavede:
+* En Postman Collection med 17 requests og 23 tests (`pm.test`), som kører mod den kørende server med `{{baseUrl}}`
+* Dækker GET alle og én (200, 404), POST (201 og 400 for manglende navn, ugyldig rolle, manglende planet, tal som navn og ødelagt JSON), PUT og DELETE (200, 204, 404), ukendt route (404), `/download` (200) og `/go-to-luke` (redirect, ender på Luke)
+* Request 10 tjekker, at ugyldige POST ikke ændrede data
+
+Sådan kører man den:
+* Start serveren med `npm start`, importér filen fra `postman/`, og kør den med Collection Runner. Genstart serveren før hver kørsel, så data er tilbage til de fire standardkarakterer
+* Resultat: 23 af 23 tests bestået
+
 ### Gon
 
 ### Mat
@@ -201,8 +212,32 @@ Vi tester lagene hver for sig, hvor det er muligt, og hele kæden fra request ti
 
 ## Kode review (issue 8)
 
-* Tre forbedringsforslag og hvilken vi gennemførte
-* AI review: hvilke forslag accepterede vi, hvilke afviste vi, og hvorfor
+### Review ud fra opgavens seks spørgsmål
+
+1. **Har funktionerne klare ansvarsområder?** Ja. Controlleren håndterer HTTP, servicen har reglerne, og repositoryet gemmer data. Undtagelsen er `createApp`, som også bygger `/download`
+2. **Er HTTP og forretningslogik blandet?** Næsten ikke. Valideringen ligger bevidst i controlleren. `/download` laver teksten direkte i `app.js`
+3. **Er der gentaget kode?** Ja: trim af tekst stod to steder i servicen (rettet), og hver handler har sin egen `try/catch` med samme 500 mønster
+4. **Er valideringen placeret fornuftigt?** Ja, i `validateCharacter`, som både POST og PUT bruger. Ulempen er, at servicen ikke er beskyttet, hvis den kaldes direkte med forkerte typer
+5. **Er fejlbehandlingen konsekvent?** Delvist. Controllerne fanger deres egne fejl, og `errorHandler` tager resten (fx ugyldig JSON)
+6. **Er koden let at forstå for en ny udvikler?** Ja: små funktioner, tydelige lag, JSDoc, `AGENTS.md` og en README med arkitekturen
+
+### Tre forbedringsforslag
+
+1. **Duplikeret trim i servicen (gennemført).** `createCharacter` og `replaceCharacter` byggede det samme objekt. Det er nu samlet i `toCleanCharacter`, så reglen står ét sted. Alle tests er stadig grønne
+2. **Dobbelt opslag og 404 i `createReplaceHandler` (ikke gennemført).** Handleren henter karakteren først og tjekker 404 igen efter `replaceCharacter`. Det kunne være ét kald, hvor `replace` selv giver 404
+3. **`/download` og `/go-to-luke` ligger i `app.js` (ikke gennemført).** De hører til i controlleren, så `app.js` kun samler routes
+
+### AI review (Copilot i WebStorm, Ask mode, opgavens prompt)
+
+Accepteret:
+* **Fejlhåndtering er delt mellem controllerne og `errorHandler`.** Hver handler fanger selv fejl og sender sin egen 500. Express 5 sender fejl fra `async` handlere videre til `errorHandler`, så det kunne samles ét sted. Vi har ikke gennemført det, fordi det rører alle handlere. `/download` ligger også direkte i `app.js` i stedet for i en controller
+* **Manglende tests.** Der var ingen node test af `GET /characters` og ingen test af, at ugyldige POST og PUT ikke ændrer data (kun Postman request 10 tjekker det)
+* **Repositoryet giver referencer til objekterne.** Rigtigt, men ingen kode ændrer dem i dag. Relevant med en database. Ikke ændret
+
+Afvist eller forældet:
+* **"Postman Collection og README afsnit mangler."** Det var rigtigt i den gren, Copilot læste, men begge ligger i åbne pull requests (Postman i #18, README i #8 og #9)
+
+Copilot fandt ikke det dobbelte opslag i `createReplaceHandler`, som vi selv fandt.
 
 ## Refleksionsspørgsmål
 
