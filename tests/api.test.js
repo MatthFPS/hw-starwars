@@ -127,11 +127,12 @@ test('getOne_unknownId_returns404', async (t) => {
     assert.deepEqual(body, { error: 'Character not found' });
 });
 
-test('getDownload_existingCharacters_returnsTextFileAttachment', async (t) => {
+test('getDownload_mixedRoles_returnsOnlyRebelsAsTextFile', async (t) => {
     // Arrange
     const baseUrl = startTestServer(t, [
         { id: 1, name: 'Luke Skywalker', role: 'Jedi', planet: 'Tatooine' },
         { id: 2, name: 'Darth Vader', role: 'Sith', planet: 'Mustafar' },
+        { id: 3, name: 'Leia Organa', role: 'Rebel', planet: 'Alderaan' },
     ]);
 
     // Act
@@ -141,7 +142,7 @@ test('getDownload_existingCharacters_returnsTextFileAttachment', async (t) => {
     assert.equal(response.status, 200);
     assert.match(response.headers.get('content-disposition'), /characters\.txt/);
     assert.match(response.headers.get('content-type'), /text\/plain/);
-    assert.equal(await response.text(), 'Luke Skywalker (Jedi) - Tatooine\nDarth Vader (Sith) - Mustafar');
+    assert.equal(await response.text(), 'Leia Organa (Rebel) - Alderaan');
 });
 
 test('getGoToLuke_anyRequest_redirectsToCharacterOne', async (t) => {

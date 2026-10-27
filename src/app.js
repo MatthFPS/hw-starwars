@@ -28,7 +28,8 @@ function createApp({ characterRepository }) {
     app.use('/characters', router);
     app.get('/download', async (req, res) => {
         const characters = await characterService.getAllCharacters();
-        const text = characters.map(c => `${c.name} (${c.role}) - ${c.planet}`).join('\n');
+        const rebels = characters.filter((c) => c.role === 'Rebel');
+        const text = rebels.map(c => `${c.name} (${c.role}) - ${c.planet}`).join('\n');
         res.attachment('characters.txt');
         res.type('text/plain');
         res.send(text);
