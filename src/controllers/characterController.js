@@ -1,13 +1,86 @@
-const notImplemented = (res) => res.status(501).json({ error: 'Not implemented' });
+const ALLOWED_ROLES = ['Jedi', 'Sith', 'Rebel', 'Smuggler'];
 
-// TODO issue 4: validateCharacter(body) returns an error message or null.
-// It is used by POST and PUT, so it should be merged early.
-// Rules: name is text with at least 2 characters after trim, role is Jedi, Sith, Rebel
-// or Smuggler, planet is non-empty text. Wrong types must give an error, never crash.
+// Returns an error message, or null if the name is valid
+function validateName(name) {
+    if (typeof name !== 'string') {
+        return 'Name must be text';
+    }
+    if (name.trim().length < 2) {
+        return 'Name must be at least 2 characters';
+    }
+    return null;
+}
+
+// Returns an error message, or null if the role is valid
+function validateRole(role) {
+    if (!ALLOWED_ROLES.includes(role)) {
+        return 'Role must be Jedi, Sith, Rebel or Smuggler';
+    }
+    return null;
+}
+
+// Returns an error message, or null if the planet is valid
+function validatePlanet(planet) {
+    if (typeof planet !== 'string') {
+        return 'Planet must be text';
+    }
+    if (planet.trim().length === 0) {
+        return 'Planet must not be empty';
+    }
+    return null;
+}
+
+// Returns an error message, or null if the whole character is valid
+function validateCharacter(body) {
+    if (!body || typeof body !== 'object') {
+        return 'Request body must be a JSON object';
+    }
+    return validateName(body.name) || validateRole(body.role) || validatePlanet(body.planet);
+}
+
+function createReplaceHandler(characterService) {
+    return async (req, res) => {
+        try {
+            const id = Number(req.params.id);
+            const existingCharacter = await characterService.getCharacterById(id);
+            if (!existingCharacter) {
+                return res.status(404).json({ error: 'Character not found' });
+            }
+            const validationError = validateCharacter(req.body);
+            if (validationError) {
+                return res.status(400).json({ error: validationError });
+            }
+            const updatedCharacter = await characterService.replaceCharacter(id, req.body);
+            if (!updatedCharacter) {
+                return res.status(404).json({ error: 'Character not found' });
+            }
+            return res.status(200).json(updatedCharacter);
+        } catch (error) {
+            console.error('Failed to replace the character:', error);
+            return res.status(500).json({ error: 'Could not replace the character' });
+        }
+    };
+}
+
+function createDeleteHandler(characterService) {
+    return async (req, res) => {
+        try {
+            const id = Number(req.params.id);
+            const deleted = await characterService.deleteCharacter(id);
+            if (!deleted) {
+                return res.status(404).json({ error: 'Character not found' });
+            }
+            return res.status(204).end();
+        } catch (error) {
+            console.error('Failed to delete the character:', error);
+            return res.status(500).json({ error: 'Could not delete the character' });
+        }
+    };
+}
 
 /**
  * Creates HTTP handlers for character operations.
- * @param {{ getAllCharacters: () => Promise<object[]> }} characterService
+ * @param {{ getAllCharacters: () => Promise<object[]>, getCharacterById: (id: number) => Promise<object | null>, createCharacter: (data: object) => Promise<object>, replaceCharacter: (id: number, data: object) => Promise<object | undefined>, deleteCharacter: (id: number) => Promise<boolean> }} characterService
  */
 function createCharacterController(characterService) {
     // Example of the pattern: call the service, answer 200, and on errors log the real
@@ -21,19 +94,39 @@ function createCharacterController(characterService) {
         }
     };
 
-    // TODO issue 3: 200 with the character, 404 if it does not exist
-    const handleGetOne = async (req, res) => notImplemented(res);
+    const handleGetOne = async (req, res) => {
+        try {
+            const id = Number(req.params.id);
+            const character = await characterService.getCharacterById(id);
+            if (!character) {
+                return res.status(404).json({ error: 'Character not found' });
+            }
+            return res.status(200).json(character);
+        } catch (error) {
+            console.error('Failed to get the character:', error);
+            return res.status(500).json({ error: 'Could not get the character' });
+        }
+    };
 
-    // TODO issue 4: validate, create, respond 201 with the new character
-    const handleCreate = async (req, res) => notImplemented(res);
+    const handleCreate = async (req, res) => {
+        const validationError = validateCharacter(req.body);
+        if (validationError) {
+            return res.status(400).json({ error: validationError });
+        }
+        try {
 
-    // TODO issue 5: validate all fields, replace, 200 or 404
-    const handleReplace = async (req, res) => notImplemented(res);
+            const newCharacter = await characterService.createCharacter(req.body);
+            return res.status(201).json(newCharacter);
+        } catch (error) {
+            console.error('Failed to create the character:', error);
+            return res.status(500).json({ error: 'Could not create the character' });
+        }
+    };
 
-    // TODO issue 5: 204 with no body, 404 if it does not exist
-    const handleDelete = async (req, res) => notImplemented(res);
+    const handleReplace = createReplaceHandler(characterService);
+    const handleDelete = createDeleteHandler(characterService);
 
     return { handleGetAll, handleGetOne, handleCreate, handleReplace, handleDelete };
 }
 
-module.exports = { createCharacterController };
+module.exports = { createCharacterController, validateCharacter };

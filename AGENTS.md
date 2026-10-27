@@ -21,7 +21,7 @@ CommonJS only. Server on port 3000. Each layer only knows the one below it.
 ## API
 
 1. GET `/characters` gives 200 and a list. GET `/characters/:id` gives 200 or 404.
-2. POST `/characters` gives 201 and the new character. The server creates a unique id. Invalid input gives 400.
+2. POST `/characters` gives 201 and the new character. The repository creates a unique id with a counter, in one operation. Invalid input gives 400.
 3. PUT `/characters/:id` replaces the character and needs all fields (name, role, planet). Invalid input gives 400, unknown id gives 404.
 4. DELETE `/characters/:id` gives 204 with no body. Unknown id gives 404.
 5. GET `/download` sends a text file. GET `/go-to-luke` redirects to `/characters/1`.
@@ -29,7 +29,7 @@ CommonJS only. Server on port 3000. Each layer only knows the one below it.
 
 Validation: `name` is text with at least 2 characters after trim, `role` is Jedi, Sith, Rebel or Smuggler, `planet` is non-empty text. Trim text on the server. Wrong types (fx `name: 123`) must give 400, never crash.
 
-Errors are `{ "error": "..." }` with a fixed text, never `err.message` or a stack trace. Log the real error with `console.error` on the server.
+Errors are `{ "error": "..." }` with a fixed text, never `err.message` or a stack trace. Log the real error with `console.error` on the server. Error messages from the API are in English. Messages the frontend makes itself are in Danish.
 
 ## Frontend
 
