@@ -214,9 +214,11 @@ Kør alle tests og lint med `npm run check`. Testene bruger Nodes indbyggede `no
 * `tests/api.test.js`: starter en rigtig server med et nyt repository til hver test og kalder den med `fetch`. Dækker:
     * 404 på ukendt route
     * `logger` og `errorHandler` (400 ved ugyldig JSON, fast 500 uden detaljer)
+    * Uventet repository-fejl fra GET `/characters` når den centrale error handler og giver et generisk 500-svar
     * GET `/characters/:id` (200 og 404)
     * POST `/characters` (201, trim, id fra klienten ignoreres, 400)
-    * PUT `/characters/:id` og DELETE `/characters/:id` (200, 400 og 404 for PUT, 204 og 404 for DELETE)
+    * PUT `/characters/:id` (200, 400 og 404); ugyldigt input giver 400 uden at ændre karakteren
+    * DELETE `/characters/:id` (204 og 404)
     * `/download` og `/go-to-luke`
 * `tests/characterController.test.js`: tester `validateCharacter` med gyldigt input, for kort navn, forkerte typer, ukendt rolle, tom planet og manglende body
 * `tests/characterRepository.test.js`: tester `getAll` (kopi af arrayet), `getById` og `add` (unikt id fra tælleren)
@@ -245,7 +247,7 @@ Vi tester lagene hver for sig, hvor det er muligt, og hele kæden fra request ti
 
 Accepteret:
 * **Fejlhåndtering var delt mellem controllerne og `errorHandler`.** Reviewet foreslog at samle uventede fejl ét sted. Det er nu gennemført: Controllerne håndterer forventede fejl, mens Express 5 sender uventede fejl fra `async`-handlere videre til den centrale `errorHandler`, som logger fejlen og svarer med et generisk 500. `/download` ligger stadig direkte i `app.js` i stedet for i en controller
-* **Manglende tests.** Der var ingen node test af `GET /characters` og ingen test af, at ugyldige POST og PUT ikke ændrer data (kun Postman request 10 tjekker det)
+* **Manglende tests.** Der var ingen node-integrationstest for et vellykket GET `/characters` eller for at ugyldig POST ikke ændrer data (Postman request 10 kontrollerer listens længde). Nu tester `api.test.js`, at en uventet repository-fejl fra GET `/characters` når den centrale error handler og giver et generisk 500-svar, og at ugyldig PUT giver 400 uden at ændre karakteren.
 * **Repositoryet giver referencer til objekterne.** Rigtigt, men ingen kode ændrer dem i dag. Relevant med en database. Ikke ændret
 
 Afvist eller forældet:
