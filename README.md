@@ -157,6 +157,18 @@ Sådan kører man den:
 * Resultat: 23 af 23 tests bestået
 
 ### Gon
+**Hvordan går en request gennem controller, service og repository?**
+
+Når man sender f.eks. POST /characters med { "name": " Yoda ", "role": "Jedi", "planet": "Dagobah" }, matcher routeren URL og metode, og derefter kaldes handleCreate i controlleren. Controlleren kalder først validateCharacter for at tjekke, at navn ikke har mindre end 2 tegn eller rolle og planet er gyldige. Hvis der sker en fejl, svarer controlleren med en status 400. Dermed bliver service og repository aldrig kaldet i denne situation. Hvis der ikke sker en fejl, kaldes createCharacter i service, som trimmer navn og planet, og kopierer kun de tre felter. Derefter kaldes add i repository, som giver karakteren et unikt id og gemmer den i arrayet. Resultatet returneres tilbage gennem service og controller, som så svarer med status 201, og den oprettede karakter.
+
+**Hvad gør validateCharacter?**
+
+ValidateCharacter tjekker først om request body er et objekt. Derefter returnerer den med validateName, validateRole og validatePlanet. Hvis alle felter er gyldige i de tre valideringsmetoder, så returnerer funktionen null, og controlleren kan fortsætte. Men hvis en af valideringsmetoder returnerer en fejlbesked, så svarer controlleren med status 400.
+
+**En ting jeg har haft svært ved:**
+
+Jeg har haft svært ved at forstå hvordan man laver en request i Postman, og hvordan man bruger postman til at sende rigtig requests til serveren. 
+
 
 ### Mat
 
