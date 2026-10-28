@@ -40,41 +40,31 @@ function validateCharacter(body) {
 
 function createReplaceHandler(characterService) {
     return async (req, res) => {
-        try {
-            const id = Number(req.params.id);
-            const existingCharacter = await characterService.getCharacterById(id);
-            if (!existingCharacter) {
-                return res.status(404).json({ error: 'Character not found' });
-            }
-            const validationError = validateCharacter(req.body);
-            if (validationError) {
-                return res.status(400).json({ error: validationError });
-            }
-            const updatedCharacter = await characterService.replaceCharacter(id, req.body);
-            if (!updatedCharacter) {
-                return res.status(404).json({ error: 'Character not found' });
-            }
-            return res.status(200).json(updatedCharacter);
-        } catch (error) {
-            console.error('Failed to replace the character:', error);
-            return res.status(500).json({ error: 'Could not replace the character' });
+        const id = Number(req.params.id);
+        const existingCharacter = await characterService.getCharacterById(id);
+        if (!existingCharacter) {
+            return res.status(404).json({ error: 'Character not found' });
         }
+        const validationError = validateCharacter(req.body);
+        if (validationError) {
+            return res.status(400).json({ error: validationError });
+        }
+        const updatedCharacter = await characterService.replaceCharacter(id, req.body);
+        if (!updatedCharacter) {
+            return res.status(404).json({ error: 'Character not found' });
+        }
+        return res.status(200).json(updatedCharacter);
     };
 }
 
 function createDeleteHandler(characterService) {
     return async (req, res) => {
-        try {
-            const id = Number(req.params.id);
-            const deleted = await characterService.deleteCharacter(id);
-            if (!deleted) {
-                return res.status(404).json({ error: 'Character not found' });
-            }
-            return res.status(204).end();
-        } catch (error) {
-            console.error('Failed to delete the character:', error);
-            return res.status(500).json({ error: 'Could not delete the character' });
+        const id = Number(req.params.id);
+        const deleted = await characterService.deleteCharacter(id);
+        if (!deleted) {
+            return res.status(404).json({ error: 'Character not found' });
         }
+        return res.status(204).end();
     };
 }
 
@@ -83,29 +73,16 @@ function createDeleteHandler(characterService) {
  * @param {{ getAllCharacters: () => Promise<object[]>, getCharacterById: (id: number) => Promise<object | null>, createCharacter: (data: object) => Promise<object>, replaceCharacter: (id: number, data: object) => Promise<object | undefined>, deleteCharacter: (id: number) => Promise<boolean> }} characterService
  */
 function createCharacterController(characterService) {
-    // Example of the pattern: call the service, answer 200, and on errors log the real
-    // error and send a fixed text. Use the same shape for the other handlers.
-    const handleGetAll = async (req, res) => {
-        try {
-            return res.status(200).json(await characterService.getAllCharacters());
-        } catch (error) {
-            console.error('Failed to get characters:', error);
-            return res.status(500).json({ error: 'Could not get the characters' });
-        }
-    };
+    const handleGetAll = async (req, res) =>
+        res.status(200).json(await characterService.getAllCharacters());
 
     const handleGetOne = async (req, res) => {
-        try {
-            const id = Number(req.params.id);
-            const character = await characterService.getCharacterById(id);
-            if (!character) {
-                return res.status(404).json({ error: 'Character not found' });
-            }
-            return res.status(200).json(character);
-        } catch (error) {
-            console.error('Failed to get the character:', error);
-            return res.status(500).json({ error: 'Could not get the character' });
+        const id = Number(req.params.id);
+        const character = await characterService.getCharacterById(id);
+        if (!character) {
+            return res.status(404).json({ error: 'Character not found' });
         }
+        return res.status(200).json(character);
     };
 
     const handleCreate = async (req, res) => {
@@ -113,14 +90,8 @@ function createCharacterController(characterService) {
         if (validationError) {
             return res.status(400).json({ error: validationError });
         }
-        try {
-
-            const newCharacter = await characterService.createCharacter(req.body);
-            return res.status(201).json(newCharacter);
-        } catch (error) {
-            console.error('Failed to create the character:', error);
-            return res.status(500).json({ error: 'Could not create the character' });
-        }
+        const newCharacter = await characterService.createCharacter(req.body);
+        return res.status(201).json(newCharacter);
     };
 
     const handleReplace = createReplaceHandler(characterService);

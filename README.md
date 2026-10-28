@@ -17,7 +17,7 @@ npm start
 
 ## API
 
-Alle svar er JSON, undtagen `/download`. Fejl har formen `{ "error": "..." }`. Fejlbeskeder fra API'et er på engelsk.
+Karakter-endpoints svarer med JSON. `/download` sender en tekstfil, `/go-to-luke` svarer med en redirect til `/characters/1`, og `/` serverer frontendens HTML-side. API-fejl har formen `{ "error": "..." }`, og fejlbeskederne er på engelsk.
 
 | Metode og URL | Body | Svar |
 | --- | --- | --- |

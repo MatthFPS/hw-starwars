@@ -26,6 +26,18 @@ function startErrorTestServer(t) {
     return `http://localhost:${server.address().port}`;
 }
 
+function startFailingCharacterServer(t, error) {
+    const characterRepository = {
+        getAll: async () => {
+            throw error;
+        },
+    };
+    const app = createApp({ characterRepository });
+    const server = app.listen(0);
+    t.after(() => server.close());
+    return `http://localhost:${server.address().port}`;
+}
+
 test('getUnknownRoute_unmatchedPath_returns404', async (t) => {
     // Arrange
     const baseUrl = startTestServer(t);
@@ -92,6 +104,27 @@ test('errorHandler_unexpectedError_returnsFixed500AndLogsRealError', async (t) =
         assert.deepEqual(responseBody, { error: 'Internal server error' });
         assert.equal(loggedErrors.length, 1);
         assert.equal(loggedErrors[0].message, 'Sensitive error details');
+    } finally {
+        console.error = originalConsoleError;
+    }
+});
+
+test('getAll_unexpectedRepositoryError_reachesCentralErrorHandler', async (t) => {
+    // Arrange
+    const error = new Error('Repository failure details');
+    const baseUrl = startFailingCharacterServer(t, error);
+    const originalConsoleError = console.error;
+    const loggedErrors = [];
+    console.error = (loggedError) => loggedErrors.push(loggedError);
+
+    // Act
+    try {
+        const response = await fetch(`${baseUrl}/characters`);
+
+        // Assert
+        assert.equal(response.status, 500);
+        assert.deepEqual(await response.json(), { error: 'Internal server error' });
+        assert.deepEqual(loggedErrors, [error]);
     } finally {
         console.error = originalConsoleError;
     }
@@ -251,6 +284,24 @@ test('putCharacter_missingField_returns400', async (t) => {
     // Assert
     assert.equal(response.status, 400);
     assert.deepEqual(await response.json(), { error: 'Planet must be text' });
+});
+
+test('putCharacter_invalidBody_returns400AndLeavesCharacterUnchanged', async (t) => {
+    // Arrange
+    const baseUrl = startTestServer(t, [luke]);
+
+    // Act
+    const response = await putCharacter(baseUrl, 1, {
+        name: 'Yoda',
+        role: 'Jedi',
+        planet: '   ',
+    });
+    const characterResponse = await fetch(`${baseUrl}/characters/1`);
+
+    // Assert
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { error: 'Planet must not be empty' });
+    assert.deepEqual(await characterResponse.json(), luke);
 });
 
 test('putCharacter_unknownId_returns404EvenWithInvalidBody', async (t) => {
