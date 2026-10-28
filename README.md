@@ -1,5 +1,7 @@
 # Star Wars API (Jedi Data Archives)
 
+<img width="1428" height="414" alt="image" src="https://github.com/user-attachments/assets/446396c6-3e98-43c6-b449-0ceace8bc733" />
+
 ## Hvad laver programmet?
 
 En Express server med et REST API, der kan oprette, hente, erstatte og slette Star Wars karakterer, og en simpel hjemmeside, der henter og viser dem med `fetch()`. Karaktererne ligger i en array i hukommelsen, så de forsvinder, når serveren genstartes.
