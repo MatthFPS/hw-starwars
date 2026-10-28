@@ -230,9 +230,9 @@ Vi tester lagene hver for sig, hvor det er muligt, og hele kæden fra request ti
 
 1. **Har funktionerne klare ansvarsområder?** Ja. Controlleren håndterer HTTP, servicen har reglerne, og repositoryet gemmer data. Undtagelsen er `createApp`, som også bygger `/download`
 2. **Er HTTP og forretningslogik blandet?** Næsten ikke. Valideringen ligger bevidst i controlleren. `/download` laver teksten direkte i `app.js`
-3. **Er der gentaget kode?** Ja: trim af tekst stod to steder i servicen (rettet), og hver handler har sin egen `try/catch` med samme 500 mønster
+3. **Er der gentaget kode?** Ja: trim af tekst stod to steder i servicen (rettet). Uventede fejl håndteres nu samlet i `errorHandler`
 4. **Er valideringen placeret fornuftigt?** Ja, i `validateCharacter`, som både POST og PUT bruger. Ulempen er, at servicen ikke er beskyttet, hvis den kaldes direkte med forkerte typer
-5. **Er fejlbehandlingen konsekvent?** Delvist. Controllerne fanger deres egne fejl, og `errorHandler` tager resten (fx ugyldig JSON)
+5. **Er fejlbehandlingen konsekvent?** Ja. Controllerne håndterer forventede fejl som ugyldigt input og manglende karakterer. Uventede fejl fra async-handlere sendes videre til Express 5's centrale `errorHandler`, som logger fejlen og svarer med et generisk 500
 6. **Er koden let at forstå for en ny udvikler?** Ja: små funktioner, tydelige lag, JSDoc, `AGENTS.md` og en README med arkitekturen
 
 ### Tre forbedringsforslag
@@ -244,7 +244,7 @@ Vi tester lagene hver for sig, hvor det er muligt, og hele kæden fra request ti
 ### AI review (Copilot i WebStorm, Ask mode, opgavens prompt)
 
 Accepteret:
-* **Fejlhåndtering er delt mellem controllerne og `errorHandler`.** Hver handler fanger selv fejl og sender sin egen 500. Express 5 sender fejl fra `async` handlere videre til `errorHandler`, så det kunne samles ét sted. Vi har ikke gennemført det, fordi det rører alle handlere. `/download` ligger også direkte i `app.js` i stedet for i en controller
+* **Fejlhåndtering var delt mellem controllerne og `errorHandler`.** Reviewet foreslog at samle uventede fejl ét sted. Det er nu gennemført: Controllerne håndterer forventede fejl, mens Express 5 sender uventede fejl fra `async`-handlere videre til den centrale `errorHandler`, som logger fejlen og svarer med et generisk 500. `/download` ligger stadig direkte i `app.js` i stedet for i en controller
 * **Manglende tests.** Der var ingen node test af `GET /characters` og ingen test af, at ugyldige POST og PUT ikke ændrer data (kun Postman request 10 tjekker det)
 * **Repositoryet giver referencer til objekterne.** Rigtigt, men ingen kode ændrer dem i dag. Relevant med en database. Ikke ændret
 
@@ -279,6 +279,8 @@ Vi har valgt en lagdelt arkitektur med controller, service og repository, og mid
 Vi gennemførte forbedringen "duplikeret trim i servicen". `createCharacter` og `replaceCharacter` byggede begge det samme objekt: trim af navn og planet og kun de tre felter. Vi samlede det i en funktion, `toCleanCharacter()`, som begge metoder bruger.
 
 Fordelen er, at reglen for datarensning nu står ét sted. Hvis reglerne ændrer sig, fx hvis vi også vil trimme `role`, skal vi kun rette i `toCleanCharacter()`, og både POST og PUT følger med. Det betyder også, at de to metoder altid behandler data på samme måde. Alle tests var grønne både før og efter ændringen, så funktionaliteten er den samme.
+
+Vi forbedrede også fejlhåndteringen: Controllerne håndterer forventede fejl, mens uventede fejl fra async-handlere sendes videre til Express 5's centrale `errorHandler`, som logger fejlen og svarer med et generisk 500.
 
 ### 5. Hvad lærte I om samspillet mellem frontend og backend?
 
