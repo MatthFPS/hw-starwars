@@ -17,7 +17,7 @@ npm start
 
 ## API
 
-Karakter-endpoints svarer med JSON. `/download` sender en tekstfil, `/go-to-luke` svarer med en redirect til `/characters/1`, og `/` serverer frontendens HTML-side. API-fejl har formen `{ "error": "..." }`, og fejlbeskederne er på engelsk.
+Karakter-endpoints svarer med JSON. `/download` sender en tekstfil, `/go-to-luke` svarer med en redirect til Luke Skywalkers karakter-id, og `/` serverer frontendens HTML-side. Hvis Luke ikke findes, svarer endpointet med 404. API-fejl har formen `{ "error": "..." }`, og fejlbeskederne er på engelsk.
 
 | Metode og URL | Body | Svar |
 | --- | --- | --- |
@@ -27,7 +27,7 @@ Karakter-endpoints svarer med JSON. `/download` sender en tekstfil, `/go-to-luke
 | PUT `/characters/:id` | `{ name, role, planet }` | 200 med den erstattede karakter, 400 ved ugyldigt input, 404 hvis id'et ikke findes |
 | DELETE `/characters/:id` | | 204 uden body, 404 hvis id'et ikke findes |
 | GET `/download` | | 200, tekstfilen `characters.txt` |
-| GET `/go-to-luke` | | 302 redirect til `/characters/1` |
+| GET `/go-to-luke` | | 302 redirect til Luke Skywalkers `/characters/:id`, 404 hvis Luke ikke findes |
 
 Gyldigt input: `name` er tekst med mindst 2 tegn efter trim, `role` er Jedi, Sith, Rebel eller Smuggler, og `planet` er tekst og ikke tom.
 
@@ -38,8 +38,8 @@ Andre fejl: ukendt route giver 404 `{ "error": "Route not found" }`, ugyldig JSO
 * `public/`: frontend (HTML og JavaScript, Bootstrap fra CDN)
 * `src/app.js`: samler middleware og routes (`createApp`)
 * `src/server.js`: opretter repository og starter serveren på port 3000
-* `src/controllers/`: læser request, validerer input og vælger statuskode
-* `src/services/`: regler for karakterer
+* `src/controllers/`: læser request og response og vælger statuskode
+* `src/services/`: validerer karakterer og håndterer forretningsregler
 * `src/repositories/`: gemmer karaktererne i en array
 * `src/middleware/`: logging, 404 og fejlhåndtering
 * `tests/`: automatiske tests
@@ -52,9 +52,9 @@ Flere regler står i [AGENTS.md](AGENTS.md), test reglerne i [docs/unit-test-gui
 ```mermaid
 flowchart TD
     Browser["Browser (fetch) og Postman"] --> App["app.js: middleware og routes"]
-    App --> Controller["Controller: input, validering, statuskode"]
+    App --> Controller["Controller: HTTP og statuskode"]
     App --> Errors["notFound og errorHandler"]
-    Controller --> Service["Service: regler"]
+    Controller --> Service["Service: validering og regler"]
     Service --> Repository["Repository: array i hukommelsen"]
 ```
 
@@ -62,17 +62,17 @@ Rækkefølgen i `app.js`: logger, `express.json()`, `express.static`, routes und
 
 ### Svar på opgavens spørgsmål
 
-* **Hvor håndteres HTTP requests?** I controlleren. Den læser `req`, tjekker input og vælger statuskode. `app.js` kobler URL og metode til de rigtige funktioner.
+* **Hvor håndteres HTTP requests?** I controlleren. Den læser `req` og `res` og vælger statuskode. `app.js` kobler URL og metode til de rigtige funktioner.
 * **Hvor gemmes karakterdata?** I repositoryet, i en array i hukommelsen.
-* **Hvor placeres valideringen?** I controlleren, i funktionen `validateCharacter`. Det er input fra HTTP, og det giver 400. Så kan servicen regne med, at data er gyldigt.
+* **Hvor placeres valideringen?** I servicen, i funktionen `validateCharacter`. Servicen afviser ugyldigt input med en valideringsfejl, og controlleren oversætter den til HTTP 400.
 * **Fordele:** Hvert lag har ét ansvar. Lagene kan testes hver for sig. Repositoryet kan skiftes til en fil eller en database uden at ændre service og controller. Strukturen kender vi fra To Do Taming.
-* **Ulemper:** Til en lille opgave er servicen tynd og gør ikke meget mere end at give data videre og finde en karakter. Der er flere filer, end der strengt taget er brug for. Validering i controlleren kan ikke genbruges, hvis der kommer en anden indgang end HTTP. Karaktererne forsvinder, når serveren genstartes.
+* **Ulemper:** Til en lille opgave er servicen stadig enkel. Der er flere filer, end der strengt taget er brug for. Karaktererne forsvinder, når serveren genstartes.
 
 ### Ansvarsfordeling
 
 * `app.js`: samler middleware og routes
-* Controller: HTTP, input, validering, statuskode og logning af fejl
-* Service: reglerne (find karakter, rens og opret, erstat, slet). `toCleanCharacter` trimmer tekst og kopierer kun de tre felter
+* Controller: HTTP, statuskode og logning af fejl
+* Service: validering og reglerne (find karakter, rens og opret, erstat, slet). `toCleanCharacter` trimmer tekst og kopierer kun de tre felter
 * Repository: den eneste, der kender arrayet
 * Middleware: logning, 404 og central fejlhåndtering
 
@@ -88,7 +88,7 @@ Gemme data i en database, så kun repositoryet skal ændres. Tilføje login og r
 
 1. **Id'er:** tælleren ligger i repositoryet, og `add` giver id'et i én operation. Servicen læser ikke først alle karakterer for at finde et nyt id. Det samme gælder PUT og DELETE: de er én operation i repositoryet.
 2. **Sprog i fejlbeskeder:** engelsk i API'et, dansk i frontenden.
-3. **Validering:** en funktion `validateCharacter` i controlleren.
+3. **Validering:** funktionen `validateCharacter` i servicen sikrer, at både direkte servicekald og HTTP-kald følger inputreglerne.
 
 ## Mit stykke (skriv under dit eget navn)
 
@@ -119,15 +119,15 @@ Undersøg (Network fanen):
 **Issue 4: POST /characters, validering og formular**
 
 Hvad jeg lavede:
-* Controller: `validateCharacter` tjekker navn (mindst 2 tegn), rolle (Jedi, Sith, Rebel eller Smuggler) og planet (ikke tom). Forkerte typer giver en fejlbesked og crasher ikke. `handleCreate` svarer 400 ved fejl og 201 med den nye karakter
-* Service: `createCharacter` trimmer navn og planet og kopierer kun de tre felter, så klienten ikke selv kan vælge id
+* Service: `validateCharacter` tjekker navn (mindst 2 tegn), rolle (Jedi, Sith, Rebel eller Smuggler) og planet (ikke tom). Forkerte typer giver en valideringsfejl og crasher ikke. `createCharacter` afviser ugyldigt input, trimmer navn og planet og kopierer kun de tre felter, så klienten ikke selv kan vælge id
+* Controller: oversætter service-lagets valideringsfejl til HTTP 400 og svarer 201 med den nye karakter ved gyldigt input
 * Repository: `add` giver id'et med en tæller i én operation
 * Frontend: formular med navn, rolle og planet. `createCharacter()` sender POST og viser serverens fejlbesked
 * Tests: `validateCharacter`, `add` og POST /characters (201, trim, id fra klient ignoreres, 400)
 
 Fejl jeg fandt:
 * Mit første forslag til id var `Date.now()`, men to oprettelser i samme millisekund kan få samme id. Det blev til en tæller
-* Valideringsfunktionerne lå først inde i `createCharacterController`, så `validateCharacter` ikke kunne eksporteres. De flyttede jeg ud
+* Valideringsfunktionerne lå først i controlleren. De blev flyttet til servicen, så valideringen også gælder ved direkte servicekald
 * Min første `handleCreate` gav aldrig et svar ved gyldigt input, så requesten hang
 
 Undersøg:
@@ -138,12 +138,12 @@ Undersøg:
 **Issue 6: download og redirect**
 
 Hvad jeg lavede:
-* GET `/download` henter karaktererne med rollen `Rebel` (Rebel Alliance, som opgaven beskriver) og sender dem som tekstfilen `characters.txt`, én linje pr. karakter. `res.attachment` får browseren til at hente filen i stedet for at vise den
-* GET `/go-to-luke` svarer med en redirect til `/characters/1`
-* Tests: download (200, filnavn, type og indhold) og redirect (302 og `Location`)
+* GET `/download` henter karaktererne med rollen `Rebel` (Rebel Alliance, som opgaven beskriver), skriver dem én linje pr. karakter til en midlertidig `characters.txt` og sender filen med `res.download()`. Den midlertidige mappe fjernes, når overførslen er afsluttet
+* GET `/go-to-luke` finder Luke Skywalker gennem servicen og svarer med en redirect til hans `/characters/:id`; hvis han ikke findes, svarer endpointet 404
+* Tests: download (200, filnavn, type og indhold), redirect (302 og `Location`) og manglende Luke (404)
 
 Undersøg:
-* `res.download()` sender en fil fra disken, så browseren henter den. Vi bruger `res.attachment()` og `res.send()`, fordi vi selv laver teksten og ikke har en fil
+* `/download` skriver den genererede Rebel-tekst til en midlertidig `characters.txt` og sender den med `res.download()`. Den midlertidige mappe fjernes, når overførslen er afsluttet. `res.send()` sender en body, men angiver ikke i sig selv, at den skal downloades. `res.attachment()` sætter download-headeren, men sender ikke filen. `res.download()` sender en fil fra disken med download-headeren
 * `res.redirect()` svarer med status 302 og en `Location` header, og browseren sender selv en ny GET til den adresse
 * En request får kun ét svar. Download og redirect er to forskellige svar, og når det første er sendt, er forbindelsen færdig. Et andet svar giver fejlen `ERR_HTTP_HEADERS_SENT`
 
@@ -161,11 +161,11 @@ Sådan kører man den:
 ### Gon
 **Hvordan går en request gennem controller, service og repository?**
 
-Når man sender f.eks. POST /characters med { "name": " Yoda ", "role": "Jedi", "planet": "Dagobah" }, matcher routeren URL og metode, og derefter kaldes handleCreate i controlleren. Controlleren kalder først validateCharacter for at tjekke, at navn ikke har mindre end 2 tegn eller rolle og planet er gyldige. Hvis der sker en fejl, svarer controlleren med en status 400. Dermed bliver service og repository aldrig kaldet i denne situation. Hvis der ikke sker en fejl, kaldes createCharacter i service, som trimmer navn og planet, og kopierer kun de tre felter. Derefter kaldes add i repository, som giver karakteren et unikt id og gemmer den i arrayet. Resultatet returneres tilbage gennem service og controller, som så svarer med status 201, og den oprettede karakter.
+Når man sender f.eks. POST /characters med { "name": " Yoda ", "role": "Jedi", "planet": "Dagobah" }, matcher routeren URL og metode, og derefter kaldes handleCreate i controlleren. Controlleren kalder createCharacter i servicen, som først validerer data. Hvis data er ugyldigt, kaster servicen en valideringsfejl, som controlleren oversætter til HTTP 400; repositoryet bliver ikke kaldt. Ved gyldigt input trimmer servicen navn og planet og kopierer kun de tre felter. Derefter kaldes add i repositoryet, som giver karakteren et unikt id og gemmer den i arrayet. Resultatet returneres tilbage gennem service og controller, som svarer med status 201 og den oprettede karakter.
 
 **Hvad gør validateCharacter?**
 
-ValidateCharacter tjekker først om request body er et objekt. Derefter returnerer den med validateName, validateRole og validatePlanet. Hvis alle felter er gyldige i de tre valideringsmetoder, så returnerer funktionen null, og controlleren kan fortsætte. Men hvis en af valideringsmetoder returnerer en fejlbesked, så svarer controlleren med status 400.
+ValidateCharacter tjekker først om data er et objekt. Derefter bruger den validateName, validateRole og validatePlanet. Hvis felterne er gyldige, returnerer funktionen null. Hvis et felt er ugyldigt, returnerer den en fejlbesked, som servicen pakker ind i en valideringsfejl; controlleren oversætter den til status 400 for HTTP-kald.
 
 **En ting jeg har haft svært ved:**
 
@@ -230,10 +230,10 @@ Vi tester lagene hver for sig, hvor det er muligt, og hele kæden fra request ti
 
 ### Review ud fra opgavens seks spørgsmål
 
-1. **Har funktionerne klare ansvarsområder?** Ja. Controlleren håndterer HTTP, servicen har reglerne, og repositoryet gemmer data. Undtagelsen er `createApp`, som også bygger `/download`
-2. **Er HTTP og forretningslogik blandet?** Næsten ikke. Valideringen ligger bevidst i controlleren. `/download` laver teksten direkte i `app.js`
+1. **Har funktionerne klare ansvarsområder?** Ja. Controlleren håndterer HTTP, servicen validerer input og har reglerne, og repositoryet gemmer data. `createApp` samler fortsat routes, herunder `/download`
+2. **Er HTTP og forretningslogik blandet?** Valideringen ligger i servicen, mens controlleren håndterer HTTP-svar. `/download` filtrerer og formaterer teksten i `app.js`
 3. **Er der gentaget kode?** Ja: trim af tekst stod to steder i servicen (rettet). Uventede fejl håndteres nu samlet i `errorHandler`
-4. **Er valideringen placeret fornuftigt?** Ja, i `validateCharacter`, som både POST og PUT bruger. Ulempen er, at servicen ikke er beskyttet, hvis den kaldes direkte med forkerte typer
+4. **Er valideringen placeret fornuftigt?** Ja, i `validateCharacter` i servicen, som både POST og PUT bruger. Derfor gælder reglerne også, hvis servicen kaldes direkte
 5. **Er fejlbehandlingen konsekvent?** Ja. Controllerne håndterer forventede fejl som ugyldigt input og manglende karakterer. Uventede fejl fra async-handlere sendes videre til Express 5's centrale `errorHandler`, som logger fejlen og svarer med et generisk 500
 6. **Er koden let at forstå for en ny udvikler?** Ja: små funktioner, tydelige lag, JSDoc, `AGENTS.md` og en README med arkitekturen
 
@@ -259,7 +259,7 @@ Copilot fandt ikke det dobbelte opslag i `createReplaceHandler`, som vi selv fan
 
 ### 1. Hvilken arkitektur har I valgt, og hvorfor?
 
-Vi har valgt en lagdelt arkitektur med controller, service og repository, og middleware til logning, 404 og fejlhåndtering. Hvert lag har ét ansvar: controlleren håndterer HTTP og validerer input, servicen har reglerne, og repositoryet er det eneste, der kender arrayet. Det gør koden nem at overskue og nem at teste, fordi lagene kan testes hver for sig. Repositoryet kan også skiftes ud med en fil eller en database uden at ændre service og controller. Strukturen kender vi fra To Do Taming.
+Vi har valgt en lagdelt arkitektur med controller, service og repository, og middleware til logning, 404 og fejlhåndtering. Hvert lag har ét ansvar: controlleren håndterer HTTP, servicen validerer input og har reglerne, og repositoryet er det eneste, der kender arrayet. Det gør koden nem at overskue og nem at teste, fordi lagene kan testes hver for sig. Repositoryet kan også skiftes ud med en fil eller en database uden at ændre service og controller. Strukturen kender vi fra To Do Taming.
 
 ### 2. Hvad ville I ændre, hvis applikationen skulle bruges af mange brugere?
 
@@ -271,7 +271,7 @@ Vi har valgt en lagdelt arkitektur med controller, service og repository, og mid
 
 * `req.params.id` er tekst og skal laves til tal, ellers finder man ingen karakter
 * Id'et ud fra `Date.now()` kan blive ens for to oprettelser i samme millisekund. Det blev til en tæller i repositoryet
-* Valideringsfunktionerne lå først inde i controller funktionen, så `validateCharacter` ikke kunne eksporteres
+* Valideringsfunktionerne lå først i controlleren og blev flyttet til servicen, så direkte servicekald også valideres
 * En `handleCreate`, der aldrig sendte et svar ved gyldigt input, så requesten hang
 * `nodemon` kom ved en fejl ind i `package.json` og blev fjernet igen
 * Mat testede, hvad der sker uden `next()` i `logger`: requesten ventede og nåede aldrig routen

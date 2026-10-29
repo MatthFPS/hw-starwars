@@ -1,55 +1,17 @@
-const ALLOWED_ROLES = ['Jedi', 'Sith', 'Rebel', 'Smuggler'];
-
-// Returns an error message, or null if the name is valid
-function validateName(name) {
-    if (typeof name !== 'string') {
-        return 'Name must be text';
-    }
-    if (name.trim().length < 2) {
-        return 'Name must be at least 2 characters';
-    }
-    return null;
-}
-
-// Returns an error message, or null if the role is valid
-function validateRole(role) {
-    if (!ALLOWED_ROLES.includes(role)) {
-        return 'Role must be Jedi, Sith, Rebel or Smuggler';
-    }
-    return null;
-}
-
-// Returns an error message, or null if the planet is valid
-function validatePlanet(planet) {
-    if (typeof planet !== 'string') {
-        return 'Planet must be text';
-    }
-    if (planet.trim().length === 0) {
-        return 'Planet must not be empty';
-    }
-    return null;
-}
-
-// Returns an error message, or null if the whole character is valid
-function validateCharacter(body) {
-    if (!body || typeof body !== 'object') {
-        return 'Request body must be a JSON object';
-    }
-    return validateName(body.name) || validateRole(body.role) || validatePlanet(body.planet);
-}
+const { CharacterValidationError } = require('../services/characterService');
 
 function createReplaceHandler(characterService) {
     return async (req, res) => {
         const id = Number(req.params.id);
-        const existingCharacter = await characterService.getCharacterById(id);
-        if (!existingCharacter) {
-            return res.status(404).json({ error: 'Character not found' });
+        let updatedCharacter;
+        try {
+            updatedCharacter = await characterService.replaceCharacter(id, req.body);
+        } catch (error) {
+            if (error instanceof CharacterValidationError) {
+                return res.status(400).json({ error: error.message });
+            }
+            throw error;
         }
-        const validationError = validateCharacter(req.body);
-        if (validationError) {
-            return res.status(400).json({ error: validationError });
-        }
-        const updatedCharacter = await characterService.replaceCharacter(id, req.body);
         if (!updatedCharacter) {
             return res.status(404).json({ error: 'Character not found' });
         }
@@ -86,12 +48,15 @@ function createCharacterController(characterService) {
     };
 
     const handleCreate = async (req, res) => {
-        const validationError = validateCharacter(req.body);
-        if (validationError) {
-            return res.status(400).json({ error: validationError });
+        try {
+            const newCharacter = await characterService.createCharacter(req.body);
+            return res.status(201).json(newCharacter);
+        } catch (error) {
+            if (error instanceof CharacterValidationError) {
+                return res.status(400).json({ error: error.message });
+            }
+            throw error;
         }
-        const newCharacter = await characterService.createCharacter(req.body);
-        return res.status(201).json(newCharacter);
     };
 
     const handleReplace = createReplaceHandler(characterService);
@@ -100,4 +65,4 @@ function createCharacterController(characterService) {
     return { handleGetAll, handleGetOne, handleCreate, handleReplace, handleDelete };
 }
 
-module.exports = { createCharacterController, validateCharacter };
+module.exports = { createCharacterController };

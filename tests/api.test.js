@@ -160,6 +160,19 @@ test('getOne_unknownId_returns404', async (t) => {
     assert.deepEqual(body, { error: 'Character not found' });
 });
 
+test('getOne_nonNumericId_returns404', async (t) => {
+    // Arrange
+    const baseUrl = startTestServer(t, [luke]);
+
+    // Act
+    const response = await fetch(`${baseUrl}/characters/abc`);
+    const body = await response.json();
+
+    // Assert
+    assert.equal(response.status, 404);
+    assert.deepEqual(body, { error: 'Character not found' });
+});
+
 test('getDownload_mixedRoles_returnsOnlyRebelsAsTextFile', async (t) => {
     // Arrange
     const baseUrl = startTestServer(t, [
@@ -173,21 +186,37 @@ test('getDownload_mixedRoles_returnsOnlyRebelsAsTextFile', async (t) => {
 
     // Assert
     assert.equal(response.status, 200);
-    assert.match(response.headers.get('content-disposition'), /characters\.txt/);
+    assert.equal(response.headers.get('content-disposition'), 'attachment; filename=characters.txt');
     assert.match(response.headers.get('content-type'), /text\/plain/);
     assert.equal(await response.text(), 'Leia Organa (Rebel) - Alderaan');
 });
 
-test('getGoToLuke_anyRequest_redirectsToCharacterOne', async (t) => {
+test('getGoToLuke_lukeHasNonOneId_redirectsToLukeCharacter', async (t) => {
     // Arrange
-    const baseUrl = startTestServer(t);
+    const baseUrl = startTestServer(t, [
+        { id: 8, name: 'Luke Skywalker', role: 'Jedi', planet: 'Tatooine' },
+    ]);
 
     // Act
     const response = await fetch(`${baseUrl}/go-to-luke`, { redirect: 'manual' });
 
     // Assert
     assert.equal(response.status, 302);
-    assert.equal(response.headers.get('location'), '/characters/1');
+    assert.equal(response.headers.get('location'), '/characters/8');
+});
+
+test('getGoToLuke_lukeDoesNotExist_returns404', async (t) => {
+    // Arrange
+    const baseUrl = startTestServer(t, [
+        { id: 8, name: 'Leia Organa', role: 'Rebel', planet: 'Alderaan' },
+    ]);
+
+    // Act
+    const response = await fetch(`${baseUrl}/go-to-luke`);
+
+    // Assert
+    assert.equal(response.status, 404);
+    assert.deepEqual(await response.json(), { error: 'Character not found' });
 });
 function postCharacter(baseUrl, body) {
     return fetch(`${baseUrl}/characters`, {

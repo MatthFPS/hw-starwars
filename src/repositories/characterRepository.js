@@ -12,17 +12,19 @@ const DEFAULT_CHARACTERS = [
  * @param {object[]} initialCharacters Starting data. Tests pass their own list.
  */
 function createCharacterRepository(initialCharacters = DEFAULT_CHARACTERS) {
-    const characters = [...initialCharacters];
+    const characters = initialCharacters.map((character) => ({ ...character }));
     let nextId = Math.max(0, ...characters.map((c) => c.id)) + 1;
 
     return {
-        // Example of the pattern: copy the array, so callers cannot change it by accident.
-        getAll: async () => [...characters],
-        getById: async (id) => characters.find((c) => c.id === id),
+        getAll: async () => characters.map((character) => ({ ...character })),
+        getById: async (id) => {
+            const character = characters.find((c) => c.id === id);
+            return character ? { ...character } : undefined;
+        },
         add: async (character) => {
             const newCharacter = { ...character, id: nextId++ };
             characters.push(newCharacter);
-            return newCharacter;
+            return { ...newCharacter };
         },
         replace: async (id, character) => {
             const index = characters.findIndex((existingCharacter) => existingCharacter.id === id);
@@ -31,7 +33,7 @@ function createCharacterRepository(initialCharacters = DEFAULT_CHARACTERS) {
             }
             const updatedCharacter = { ...character, id };
             characters[index] = updatedCharacter;
-            return updatedCharacter;
+            return { ...updatedCharacter };
         },
         remove: async (id) => {
             const index = characters.findIndex((character) => character.id === id);

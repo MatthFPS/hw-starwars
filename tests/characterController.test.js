@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { validateCharacter } = require('../src/controllers/characterController');
+const { validateCharacter } = require('../src/services/characterService');
 
 function validBody() {
     return { name: 'Luke Skywalker', role: 'Jedi', planet: 'Tatooine' };
